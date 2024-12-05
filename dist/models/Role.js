@@ -21,7 +21,7 @@ __decorate([
     __metadata("design:type", Number)
 ], Role.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: false, default: 'Default Role' }),
+    (0, typeorm_1.Column)({ nullable: false, default: "Default Role" }),
     __metadata("design:type", String)
 ], Role.prototype, "name", void 0);
 __decorate([
@@ -35,12 +35,12 @@ __decorate([
 __decorate([
     (0, typeorm_1.ManyToMany)(() => Permission_1.Permission, (permission) => permission.roles),
     (0, typeorm_1.JoinTable)({
-        name: 'role_permissions',
-        joinColumn: { name: 'role_id', referencedColumnName: 'id' },
-        inverseJoinColumn: { name: 'permission_id', referencedColumnName: 'id' },
+        name: "role_permissions",
+        joinColumn: { name: "role_id", referencedColumnName: "id" },
+        inverseJoinColumn: { name: "permission_id", referencedColumnName: "id" },
     }),
     __metadata("design:type", Array)
 ], Role.prototype, "permissions", void 0);
 exports.Role = Role = __decorate([
-    (0, typeorm_1.Entity)('roles')
+    (0, typeorm_1.Entity)("roles")
 ], Role);

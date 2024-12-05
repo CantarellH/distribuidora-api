@@ -58,7 +58,9 @@ const createInventoryEntry = (req, res) => __awaiter(void 0, void 0, void 0, fun
             });
             yield detailRepository.save(newDetail);
         }
-        res.status(201).json({ message: "Entrada de inventario creada con éxito." });
+        res
+            .status(201)
+            .json({ message: "Entrada de inventario creada con éxito." });
     }
     catch (error) {
         console.error(error);
@@ -105,13 +107,19 @@ const updateInventoryEntry = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const { id } = req.params;
         const { entryDetails } = req.body;
         if (!entryDetails || !Array.isArray(entryDetails)) {
-            res.status(400).json({ error: "Los detalles son obligatorios para actualizar la entrada." });
+            res
+                .status(400)
+                .json({
+                error: "Los detalles son obligatorios para actualizar la entrada.",
+            });
             return;
         }
         // Actualiza la entrada en la base de datos
         const inventoryRepository = data_source_1.AppDataSource.getRepository(InventoryEntry_1.InventoryEntry);
         const inventoryDetailRepository = data_source_1.AppDataSource.getRepository(InventoryEntryDetail_1.InventoryEntryDetail);
-        const inventoryEntry = yield inventoryRepository.findOne({ where: { id: Number(id) } });
+        const inventoryEntry = yield inventoryRepository.findOne({
+            where: { id: Number(id) },
+        });
         if (!inventoryEntry) {
             res.status(404).json({ error: "Entrada de inventario no encontrada." });
             return;
@@ -125,7 +133,9 @@ const updateInventoryEntry = (req, res) => __awaiter(void 0, void 0, void 0, fun
             weightTotal: detail.weightTotal,
         }));
         yield inventoryDetailRepository.save(newDetails);
-        res.status(200).json({ message: "Entrada de inventario actualizada correctamente." });
+        res
+            .status(200)
+            .json({ message: "Entrada de inventario actualizada correctamente." });
     }
     catch (error) {
         console.error(error);
@@ -137,13 +147,17 @@ const deleteInventoryEntry = (req, res) => __awaiter(void 0, void 0, void 0, fun
     try {
         const { id } = req.params;
         const inventoryEntryRepository = data_source_1.AppDataSource.getRepository(InventoryEntry_1.InventoryEntry);
-        const entry = yield inventoryEntryRepository.findOne({ where: { id: parseInt(id, 10) } });
+        const entry = yield inventoryEntryRepository.findOne({
+            where: { id: parseInt(id, 10) },
+        });
         if (!entry) {
             res.status(404).json({ error: "Entrada de inventario no encontrada." });
             return;
         }
         yield inventoryEntryRepository.remove(entry);
-        res.status(200).json({ message: "Entrada de inventario eliminada con éxito." });
+        res
+            .status(200)
+            .json({ message: "Entrada de inventario eliminada con éxito." });
     }
     catch (error) {
         console.error(error);

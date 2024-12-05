@@ -11,16 +11,19 @@ const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const eggtypeRoutes_1 = __importDefault(require("./routes/eggtypeRoutes"));
 const supplierRoutes_1 = __importDefault(require("./routes/supplierRoutes"));
 const inventoryRoutes_1 = __importDefault(require("./routes/inventoryRoutes"));
+const clientRoutes_1 = __importDefault(require("./routes/clientRoutes"));
+const remissionsRoutes_1 = __importDefault(require("./routes/remissionsRoutes"));
 dotenv_1.default.config();
-// Agregar las rutas para roles
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
-app.get('/', (_req, res) => {
-    res.send('API funcionando correctamente');
+app.get("/", (_req, res) => {
+    res.send("API funcionando correctamente");
 });
-app.use('/api/users', userRoutes_1.default);
-app.use('/api/roles', roleRoutes_1.default);
-app.use('/api/types', eggtypeRoutes_1.default);
-app.use('/api/suppliers', supplierRoutes_1.default);
-app.use('/api/inventory', inventoryRoutes_1.default);
+app.use("/api/users", userRoutes_1.default);
+app.use("/api/roles", roleRoutes_1.default);
+app.use("/api/types", eggtypeRoutes_1.default);
+app.use("/api/suppliers", supplierRoutes_1.default);
+app.use("/api/inventory", inventoryRoutes_1.default);
+app.use("/api/clients", clientRoutes_1.default);
+app.use("/api/remissions", remissionsRoutes_1.default);
 exports.default = app;

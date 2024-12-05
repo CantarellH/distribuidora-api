@@ -23,7 +23,11 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     try {
         const { username, password, role, status } = req.body;
         if (!username || !password || !role) {
-            res.status(400).json({ error: "Faltan campos obligatorios (username, password, role)" });
+            res
+                .status(400)
+                .json({
+                error: "Faltan campos obligatorios (username, password, role)",
+            });
             return;
         }
         const roleRepository = data_source_1.AppDataSource.getRepository(Role_1.Role);
@@ -48,7 +52,9 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             status: status === undefined ? true : status,
         });
         const savedUser = yield userRepository.save(newUser);
-        res.status(201).json({ message: "Usuario creado con éxito", user: savedUser });
+        res
+            .status(201)
+            .json({ message: "Usuario creado con éxito", user: savedUser });
     }
     catch (error) {
         console.error(error);
@@ -58,8 +64,14 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 exports.createUser = createUser;
 // Validación de los datos de entrada para crear un usuario
 exports.validateCreateUser = [
-    (0, express_validator_1.body)("username").isString().notEmpty().withMessage("El nombre de usuario es obligatorio"),
-    (0, express_validator_1.body)("password").isString().notEmpty().withMessage("La contraseña es obligatoria"),
+    (0, express_validator_1.body)("username")
+        .isString()
+        .notEmpty()
+        .withMessage("El nombre de usuario es obligatorio"),
+    (0, express_validator_1.body)("password")
+        .isString()
+        .notEmpty()
+        .withMessage("La contraseña es obligatoria"),
     (0, express_validator_1.body)("role").isNumeric().withMessage("El rol debe ser un número válido"),
 ];
 // Manejo de errores de validación
@@ -78,16 +90,16 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const userRepository = data_source_1.AppDataSource.getRepository(User_1.User);
         const user = yield userRepository.findOne({
             where: { username },
-            relations: ['role'], // Asegúrate de incluir la relación con el rol
+            relations: ["role"], // Asegúrate de incluir la relación con el rol
         });
         if (!user) {
-            res.status(400).json({ error: 'Credenciales inválidas' });
+            res.status(400).json({ error: "Credenciales inválidas" });
             return;
         }
         // Validar contraseña (código omitido para simplicidad)
         // Generar el token JWT incluyendo el rol
         const token = jsonwebtoken_1.default.sign({ id: user.id, role: user.role.name }, // Incluir el nombre del rol
-        process.env.JWT_SECRET || 'tu_secreto', { expiresIn: '5m' });
+        process.env.JWT_SECRET || "tu_secreto", { expiresIn: "5m" });
         res.status(200).json({ token });
     }
     catch (error) {
@@ -99,7 +111,7 @@ const getUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userRepository = data_source_1.AppDataSource.getRepository(User_1.User);
         const users = yield userRepository.find({
-            select: ['id', 'username', 'role', 'status', 'created_at', 'updated_at'], // Excluir 'password'
+            select: ["id", "username", "role", "status", "created_at", "updated_at"], // Excluir 'password'
         });
         res.status(200).json(users);
     }
@@ -169,23 +181,23 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 exports.deleteUser = deleteUser;
 const refreshToken = (req, res) => {
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = authHeader && authHeader.split(" ")[1];
     if (!token) {
-        res.status(401).json({ error: 'No autorizado' });
+        res.status(401).json({ error: "No autorizado" });
         return;
     }
-    jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'tu_secreto', (err, decoded) => {
+    jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || "tu_secreto", (err, decoded) => {
         if (err || !decoded) {
-            res.status(403).json({ error: 'Token inválido o expirado' });
+            res.status(403).json({ error: "Token inválido o expirado" });
             return;
         }
         const user = decoded; // Especifica que el token es del tipo JwtPayload
         if (!user.id || !user.role) {
-            res.status(403).json({ error: 'Token inválido, falta información' });
+            res.status(403).json({ error: "Token inválido, falta información" });
             return;
         }
         // Generar un nuevo token
-        const newToken = jsonwebtoken_1.default.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'tu_secreto', { expiresIn: '5m' } // Renovación por 5 minutos
+        const newToken = jsonwebtoken_1.default.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || "tu_secreto", { expiresIn: "5m" } // Renovación por 5 minutos
         );
         res.status(200).json({ token: newToken });
     });

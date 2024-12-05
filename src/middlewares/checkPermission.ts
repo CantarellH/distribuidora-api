@@ -39,7 +39,7 @@ export const checkPermission = (permission: string) => {
 
       // Validar si el permiso requerido está en los permisos del rol
       const hasPermission = role.permissions.some((perm) => {
-        console.log(`Comparando permiso ${perm.name} con ${permission}`);
+        
         return perm.name === permission;
       });
 

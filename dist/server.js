@@ -20,14 +20,13 @@ const PORT = process.env.PORT || 3000;
 (() => __awaiter(void 0, void 0, void 0, function* () {
     try {
         yield data_source_1.AppDataSource.initialize();
-        // console.log('Database connected successfully');
         app_1.default.listen(PORT, () => {
             console.log(`Server running at http://localhost:${PORT}`);
         });
     }
     catch (error) {
-        console.error('Error starting the server:', error.message);
-        console.error(error.stack); // Muestra el stack del error
-        process.exit(1); // Salida del proceso con error
+        console.error("Error starting the server:", error.message);
+        console.error(error.stack);
+        process.exit(1);
     }
 }))();

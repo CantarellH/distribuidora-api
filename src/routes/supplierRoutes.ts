@@ -4,12 +4,19 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  filterSuppliers,
 } from "../controllers/SupplierController";
 import { authenticateToken } from "../middlewares/authenticateToken";
 import { checkPermission } from "../middlewares/checkPermission";
 
 const router = express.Router();
 
+router.get(
+  "/search",
+  authenticateToken,
+  checkPermission("view_suppliers"),
+  filterSuppliers
+);
 router.get(
   "/",
   authenticateToken,

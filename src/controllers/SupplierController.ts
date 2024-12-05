@@ -57,6 +57,8 @@ export const updateSupplier = async (
     const { name, contact_info } = req.body;
 
     const supplierRepository = AppDataSource.getRepository(Supplier);
+
+    // Verificar si el proveedor existe
     const supplier = await supplierRepository.findOneBy({
       id: parseInt(id, 10),
     });
@@ -66,6 +68,19 @@ export const updateSupplier = async (
       return;
     }
 
+    // Verificar si el nuevo nombre ya existe en otro proveedor
+    if (name) {
+      const existingSupplier = await supplierRepository.findOneBy({ name });
+
+      if (existingSupplier && existingSupplier.id !== supplier.id) {
+        res
+          .status(400)
+          .json({ error: "Ya existe un proveedor con este nombre." });
+        return;
+      }
+    }
+
+    // Actualizar los campos del proveedor
     supplier.name = name || supplier.name;
     supplier.contact_info = contact_info || supplier.contact_info;
 
@@ -77,6 +92,7 @@ export const updateSupplier = async (
     res.status(500).json({ error: "Error al actualizar proveedor." });
   }
 };
+
 
 export const deleteSupplier = async (
   req: Request,
@@ -101,5 +117,39 @@ export const deleteSupplier = async (
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al eliminar proveedor." });
+  }
+};
+
+export const filterSuppliers = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { name, contact_info } = req.query;
+
+    const supplierRepository = AppDataSource.getRepository(Supplier);
+
+    // Construir consulta dinámica
+    const query = supplierRepository.createQueryBuilder("supplier");
+
+    // Filtrar por nombre si se proporciona
+    if (name) {
+      query.andWhere("supplier.name ILIKE :name", { name: `%${name}%` });
+    }
+
+    // Filtrar por información de contacto si se proporciona
+    if (contact_info) {
+      query.andWhere("supplier.contact_info ILIKE :contact_info", {
+        contact_info: `%${contact_info}%`,
+      });
+    }
+
+    // Ejecutar la consulta
+    const suppliers = await query.getMany();
+
+    res.status(200).json(suppliers);
+  } catch (error) {
+    console.error("Error al filtrar proveedores:", error);
+    res.status(500).json({ error: "Error al filtrar proveedores." });
   }
 };

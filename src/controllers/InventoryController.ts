@@ -77,12 +77,42 @@ export const getInventoryEntries = async (
   res: Response
 ): Promise<void> => {
   try {
-    const inventoryEntryRepository =
-      AppDataSource.getRepository(InventoryEntry);
+    const { supplierId, eggTypeId, startDate, endDate } = req.query;
 
-    const entries = await inventoryEntryRepository.find({
-      relations: ["supplier", "details", "details.eggType"],
-    });
+    const inventoryEntryRepository = AppDataSource.getRepository(InventoryEntry);
+    const query = inventoryEntryRepository.createQueryBuilder("inventoryEntry");
+
+    // Relaciones necesarias
+    query.leftJoinAndSelect("inventoryEntry.supplier", "supplier")
+      .leftJoinAndSelect("inventoryEntry.details", "details")
+      .leftJoinAndSelect("details.eggType", "eggType");
+
+    // Aplicar filtros según los parámetros recibidos
+    if (supplierId) {
+      query.andWhere("supplier.id = :supplierId", { supplierId: parseInt(supplierId as string, 10) });
+    }
+
+    if (eggTypeId) {
+      query.andWhere("eggType.id = :eggTypeId", { eggTypeId: parseInt(eggTypeId as string, 10) });
+    }
+
+    if (startDate && endDate) {
+      const parsedStartDate = new Date(startDate as string);
+      const parsedEndDate = new Date(endDate as string);
+
+      if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+        res.status(400).json({ error: "Fechas inválidas." });
+        return;
+      }
+
+      query.andWhere("inventoryEntry.createdAt BETWEEN :startDate AND :endDate", {
+        startDate: parsedStartDate.toISOString(),
+        endDate: parsedEndDate.toISOString(),
+      });
+    }
+
+    // Ejecutar la consulta
+    const entries = await query.getMany();
 
     res.status(200).json(entries);
   } catch (error) {

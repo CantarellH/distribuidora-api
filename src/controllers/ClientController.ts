@@ -7,47 +7,93 @@ export const createClient = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { name, contact_info } = req.body; // Cambia a contact_info aquí
+    const { name, contact_info } = req.body;
 
     if (!name || !contact_info) {
-       res
+      res
         .status(400)
         .json({
           error: "El nombre y la información de contacto son obligatorios.",
         });
+      return;
     }
 
     const clientRepository = AppDataSource.getRepository(Client);
+
+    
+    const existingClient = await clientRepository.findOne({
+      where: [{ name }, { contact_info }],
+    });
+
+    if (existingClient) {
+      res.status(400).json({
+        error: "Ya existe un cliente con el mismo nombre o información de contacto.",
+      });
+      return;
+    }
 
     const newClient = clientRepository.create({
       name,
       contact_info,
       status: true,
-    }); // Cambia a contact_info aquí
+    });
+
     const savedClient = await clientRepository.save(newClient);
 
-     res.status(201).json(savedClient);
+    res.status(201).json(savedClient);
   } catch (error) {
     console.error(error);
-     res.status(500).json({ error: "Error interno del servidor." });
+    res.status(500).json({ error: "Error interno del servidor." });
   }
 };
 
-export const getClients = async (
-  _req: Request,
-  res: Response
-): Promise<void> => {
+
+export const getClients = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { name, status, startDate, endDate } = req.query;
+
     const clientRepository = AppDataSource.getRepository(Client);
 
-    const clients = await clientRepository.find({ where: { status: true } });
+    // Crear consulta básica
+    const query = clientRepository.createQueryBuilder("client");
 
-     res.status(200).json(clients);
+    // Filtro por nombre (búsqueda parcial con ILIKE para insensibilidad de mayúsculas)
+    if (name) {
+      query.andWhere("client.name ILIKE :name", { name: `%${name}%` });
+    }
+
+    // Filtro por estado
+    if (status !== undefined) {
+      const statusBoolean = status === "true";
+      query.andWhere("client.status = :status", { status: statusBoolean });
+    }
+
+    // Filtro por rango de fechas de creación
+    if (startDate && endDate) {
+      const parsedStartDate = new Date(startDate as string);
+      const parsedEndDate = new Date(endDate as string);
+
+      if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+        res.status(400).json({ error: "Fechas inválidas." });
+        return;
+      }
+
+      query.andWhere("client.created_at BETWEEN :startDate AND :endDate", {
+        startDate: parsedStartDate.toISOString(),
+        endDate: parsedEndDate.toISOString(),
+      });
+    }
+
+    // Ejecutar consulta
+    const clients = await query.getMany();
+
+    res.status(200).json(clients);
   } catch (error) {
-    console.error(error);
-     res.status(500).json({ error: "Error interno del servidor." });
+    console.error("Error en la búsqueda de clientes:", error);
+    res.status(500).json({ error: "Error interno del servidor." });
   }
 };
+
 
 export const getClientById = async (
   req: Request,

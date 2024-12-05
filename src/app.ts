@@ -7,6 +7,7 @@ import eggtypes from "./routes/eggtypeRoutes";
 import suppliers from "./routes/supplierRoutes";
 import inventory from "./routes/inventoryRoutes";
 import clients from "./routes/clientRoutes";
+import remissions from "./routes/remissionsRoutes";
 
 dotenv.config();
 
@@ -24,5 +25,6 @@ app.use("/api/types", eggtypes);
 app.use("/api/suppliers", suppliers);
 app.use("/api/inventory", inventory);
 app.use("/api/clients", clients);
+app.use("/api/remissions", remissions);
 
 export default app;

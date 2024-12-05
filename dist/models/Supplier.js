@@ -24,7 +24,7 @@ __decorate([
     __metadata("design:type", String)
 ], Supplier.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
+    (0, typeorm_1.Column)({ type: "text", nullable: true }),
     __metadata("design:type", String)
 ], Supplier.prototype, "contact_info", void 0);
 __decorate([
@@ -32,5 +32,5 @@ __decorate([
     __metadata("design:type", Array)
 ], Supplier.prototype, "inventoryEntries", void 0);
 exports.Supplier = Supplier = __decorate([
-    (0, typeorm_1.Entity)('suppliers')
+    (0, typeorm_1.Entity)("suppliers")
 ], Supplier);

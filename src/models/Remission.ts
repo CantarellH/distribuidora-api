@@ -1,56 +1,34 @@
 import {
   Entity,
   PrimaryGeneratedColumn,
-  ManyToOne,
   Column,
+  ManyToOne,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  JoinColumn,
 } from "typeorm";
 import { Client } from "./Client";
+import { RemissionDetail } from "./RemissionDetail";
 
-@Entity("remissions")
+@Entity()
 export class Remission {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => Client, { nullable: false, onDelete: "CASCADE" })
-  @JoinColumn({ name: "client_id" })
-  client!: Client;
+  @Column()
+  date!: Date; 
 
-  @Column({ name: "note", type: "text", nullable: true })
-  note?: string;
+  @ManyToOne(() => Client, (client) => client.remissions, { eager: true })
+  client!: Client; 
 
-  @Column({ name: "total_boxes", type: "int", default: 0 })
-  totalBoxes!: number;
-
-  @Column({
-    name: "total_net_weight",
-    type: "numeric",
-    precision: 10,
-    scale: 2,
-    default: 0,
+  @OneToMany(() => RemissionDetail, (detail) => detail.remission, {
+    cascade: true,
   })
-  totalNetWeight!: number;
+  details!: RemissionDetail[]; 
 
-  @Column({
-    name: "total_amount",
-    type: "numeric",
-    precision: 10,
-    scale: 2,
-    default: 0,
-  })
-  totalAmount!: number;
-
-  @Column({ name: "status", type: "varchar", length: 20, default: "Pendiente" })
-  status!: string;
-
-  @CreateDateColumn({ name: "remission_date" })
-  remissionDate!: Date;
-
-  @CreateDateColumn({ name: "created_at" })
+  @CreateDateColumn()
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: "updated_at" })
-  updatedAt!: Date;
+  @UpdateDateColumn()
+  updatedAt!: Date; 
 }

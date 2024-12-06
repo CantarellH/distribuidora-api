@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Client = void 0;
 const typeorm_1 = require("typeorm");
 const Remission_1 = require("./Remission");
+const Payment_1 = require("./Payment");
 let Client = class Client {
 };
 exports.Client = Client;
@@ -35,6 +36,10 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => Remission_1.Remission, (remission) => remission.client),
     __metadata("design:type", Array)
 ], Client.prototype, "remissions", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => Payment_1.Payment, (payment) => payment.client),
+    __metadata("design:type", Array)
+], Client.prototype, "payments", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: "boolean", default: true }),
     __metadata("design:type", Boolean)

@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 import { Remission } from "./Remission";
+import { Payment } from "./Payment";
 
 @Entity("clients")
 export class Client {
@@ -24,7 +25,10 @@ export class Client {
 
   @OneToMany(() => Remission, (remission) => remission.client)
   remissions!: Remission[];
-  
+
+  @OneToMany(() => Payment, (payment) => payment.client)
+  payments!: Payment[]; // Relación con los pagos
+
   @Column({ type: "boolean", default: true })
   status!: boolean;
 
@@ -33,5 +37,4 @@ export class Client {
 
   @UpdateDateColumn({ name: "updated_at" })
   updatedAt!: Date;
-
 }

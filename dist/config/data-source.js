@@ -14,6 +14,7 @@ const RemissionDetail_1 = require("../models/RemissionDetail");
 const Remission_1 = require("../models/Remission");
 const Client_1 = require("../models/Client");
 const RemissionWeightDetail_1 = require("../models/RemissionWeightDetail");
+const Payment_1 = require("../models/Payment");
 exports.AppDataSource = new typeorm_1.DataSource({
     type: 'postgres',
     host: process.env.DB_HOST || 'localhost',
@@ -34,6 +35,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
         RemissionDetail_1.RemissionDetail,
         Remission_1.Remission,
         Client_1.Client,
-        RemissionWeightDetail_1.RemissionWeightDetail
+        RemissionWeightDetail_1.RemissionWeightDetail,
+        Payment_1.Payment
     ],
 });

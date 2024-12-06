@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteSupplier = exports.updateSupplier = exports.createSupplier = exports.getSuppliers = void 0;
+exports.filterSuppliers = exports.deleteSupplier = exports.updateSupplier = exports.createSupplier = exports.getSuppliers = void 0;
 const data_source_1 = require("../config/data-source");
 const Supplier_1 = require("../models/Supplier");
 const getSuppliers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -54,6 +54,7 @@ const updateSupplier = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const { id } = req.params;
         const { name, contact_info } = req.body;
         const supplierRepository = data_source_1.AppDataSource.getRepository(Supplier_1.Supplier);
+        // Verificar si el proveedor existe
         const supplier = yield supplierRepository.findOneBy({
             id: parseInt(id, 10),
         });
@@ -61,6 +62,17 @@ const updateSupplier = (req, res) => __awaiter(void 0, void 0, void 0, function*
             res.status(404).json({ error: "Proveedor no encontrado." });
             return;
         }
+        // Verificar si el nuevo nombre ya existe en otro proveedor
+        if (name) {
+            const existingSupplier = yield supplierRepository.findOneBy({ name });
+            if (existingSupplier && existingSupplier.id !== supplier.id) {
+                res
+                    .status(400)
+                    .json({ error: "Ya existe un proveedor con este nombre." });
+                return;
+            }
+        }
+        // Actualizar los campos del proveedor
         supplier.name = name || supplier.name;
         supplier.contact_info = contact_info || supplier.contact_info;
         const updatedSupplier = yield supplierRepository.save(supplier);
@@ -92,3 +104,29 @@ const deleteSupplier = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.deleteSupplier = deleteSupplier;
+const filterSuppliers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { name, contact_info } = req.query;
+        const supplierRepository = data_source_1.AppDataSource.getRepository(Supplier_1.Supplier);
+        // Construir consulta dinámica
+        const query = supplierRepository.createQueryBuilder("supplier");
+        // Filtrar por nombre si se proporciona
+        if (name) {
+            query.andWhere("supplier.name ILIKE :name", { name: `%${name}%` });
+        }
+        // Filtrar por información de contacto si se proporciona
+        if (contact_info) {
+            query.andWhere("supplier.contact_info ILIKE :contact_info", {
+                contact_info: `%${contact_info}%`,
+            });
+        }
+        // Ejecutar la consulta
+        const suppliers = yield query.getMany();
+        res.status(200).json(suppliers);
+    }
+    catch (error) {
+        console.error("Error al filtrar proveedores:", error);
+        res.status(500).json({ error: "Error al filtrar proveedores." });
+    }
+});
+exports.filterSuppliers = filterSuppliers;

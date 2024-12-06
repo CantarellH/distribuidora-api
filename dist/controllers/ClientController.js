@@ -14,20 +14,30 @@ const data_source_1 = require("../config/data-source");
 const Client_1 = require("../models/Client");
 const createClient = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, contact_info } = req.body; // Cambia a contact_info aquí
+        const { name, contact_info } = req.body;
         if (!name || !contact_info) {
             res
                 .status(400)
                 .json({
                 error: "El nombre y la información de contacto son obligatorios.",
             });
+            return;
         }
         const clientRepository = data_source_1.AppDataSource.getRepository(Client_1.Client);
+        const existingClient = yield clientRepository.findOne({
+            where: [{ name }, { contact_info }],
+        });
+        if (existingClient) {
+            res.status(400).json({
+                error: "Ya existe un cliente con el mismo nombre o información de contacto.",
+            });
+            return;
+        }
         const newClient = clientRepository.create({
             name,
             contact_info,
             status: true,
-        }); // Cambia a contact_info aquí
+        });
         const savedClient = yield clientRepository.save(newClient);
         res.status(201).json(savedClient);
     }
@@ -37,14 +47,40 @@ const createClient = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.createClient = createClient;
-const getClients = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getClients = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const { name, status, startDate, endDate } = req.query;
         const clientRepository = data_source_1.AppDataSource.getRepository(Client_1.Client);
-        const clients = yield clientRepository.find({ where: { status: true } });
+        // Crear consulta básica
+        const query = clientRepository.createQueryBuilder("client");
+        // Filtro por nombre (búsqueda parcial con ILIKE para insensibilidad de mayúsculas)
+        if (name) {
+            query.andWhere("client.name ILIKE :name", { name: `%${name}%` });
+        }
+        // Filtro por estado
+        if (status !== undefined) {
+            const statusBoolean = status === "true";
+            query.andWhere("client.status = :status", { status: statusBoolean });
+        }
+        // Filtro por rango de fechas de creación
+        if (startDate && endDate) {
+            const parsedStartDate = new Date(startDate);
+            const parsedEndDate = new Date(endDate);
+            if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+                res.status(400).json({ error: "Fechas inválidas." });
+                return;
+            }
+            query.andWhere("client.created_at BETWEEN :startDate AND :endDate", {
+                startDate: parsedStartDate.toISOString(),
+                endDate: parsedEndDate.toISOString(),
+            });
+        }
+        // Ejecutar consulta
+        const clients = yield query.getMany();
         res.status(200).json(clients);
     }
     catch (error) {
-        console.error(error);
+        console.error("Error en la búsqueda de clientes:", error);
         res.status(500).json({ error: "Error interno del servidor." });
     }
 });

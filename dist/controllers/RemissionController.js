@@ -57,10 +57,17 @@ const getRemissions = (_req, res) => __awaiter(void 0, void 0, void 0, function*
 exports.getRemissions = getRemissions;
 const getRemissionById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
+    const parsedId = parseInt(id, 10);
+    // Validar el ID parseado
+    if (isNaN(parsedId)) {
+        console.error("ID inválido recibido:", id);
+        res.status(400).json({ error: "ID inválido proporcionado." });
+        return;
+    }
     try {
         const remissionRepo = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
         const remission = yield remissionRepo.findOne({
-            where: { id: parseInt(id, 10) },
+            where: { id: parsedId },
             relations: ["client", "details", "details.eggType", "details.supplier", "details.weightDetails"],
         });
         if (!remission) {
@@ -70,8 +77,8 @@ const getRemissionById = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.json(remission);
     }
     catch (error) {
-        const err = error;
-        res.status(500).json({ error: err.message });
+        console.error("Error al obtener la remisión por ID:", error);
+        res.status(500).json({ error: error.message });
     }
 });
 exports.getRemissionById = getRemissionById;
@@ -114,19 +121,9 @@ const deleteRemission = (req, res) => __awaiter(void 0, void 0, void 0, function
 exports.deleteRemission = deleteRemission;
 const filterRemissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Extraer parámetros de la consulta
+        // Extraer y sanitizar los parámetros de la consulta
         const { startDate, endDate, clientId, status } = req.query;
         console.log("Parámetros recibidos:", { startDate, endDate, clientId, status });
-        // Validar si no hay parámetros
-        if (!startDate && !endDate && !clientId && !status) {
-            console.log("Sin parámetros proporcionados. Devolviendo todas las remisiones.");
-            const remissionRepo = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
-            const remissions = yield remissionRepo.find({
-                relations: ["client", "details", "details.eggType", "details.supplier", "details.weightDetails"],
-            });
-            res.json(remissions);
-            return;
-        }
         // Crear el query builder
         const remissionRepo = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
         const query = remissionRepo.createQueryBuilder("remission")
@@ -136,7 +133,7 @@ const filterRemissions = (req, res) => __awaiter(void 0, void 0, void 0, functio
             .leftJoinAndSelect("details.supplier", "supplier")
             .leftJoinAndSelect("details.weightDetails", "weightDetails");
         // Validar y manejar filtros de fechas
-        if ((startDate && startDate.toString().trim() !== "") || (endDate && endDate.toString().trim() !== "")) {
+        if (startDate || endDate) {
             if (!startDate || !endDate) {
                 console.error("Ambas fechas deben proporcionarse juntas.");
                 res.status(400).json({ error: "Debe proporcionar ambas fechas (startDate y endDate)." });

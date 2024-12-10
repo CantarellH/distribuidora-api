@@ -13,32 +13,32 @@ const router = express.Router();
 
 router.post(
   "/",
-  authenticateToken,
-  checkPermission("create_inventory"),
+  // authenticateToken,
+  // checkPermission("create_inventory"),
   createInventoryEntry
 );
 router.get(
   "/",
-  authenticateToken,
-  checkPermission("view_inventory"),
+  // authenticateToken,
+  // checkPermission("view_inventory"),
   getInventoryEntries
 );
 router.get(
   "/:id",
-  authenticateToken,
-  checkPermission("view_inventory"),
+  // authenticateToken,
+  // checkPermission("view_inventory"),
   getInventoryEntryById
 );
 router.put(
   "/:id",
-  authenticateToken,
-  checkPermission("update_inventory"),
+  // authenticateToken,
+  // checkPermission("update_inventory"),
   updateInventoryEntry
 );
 router.delete(
   "/:id",
-  authenticateToken,
-  checkPermission("delete_inventory"),
+  // authenticateToken,
+  // checkPermission("delete_inventory"),
   deleteInventoryEntry
 );
 

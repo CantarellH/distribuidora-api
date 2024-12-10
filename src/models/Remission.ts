@@ -2,16 +2,17 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
   OneToMany,
+  ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToMany
 } from "typeorm";
 import { Client } from "./Client";
 import { RemissionDetail } from "./RemissionDetail";
 import { Payment } from "./Payment";
 
-@Entity()
+@Entity("remissions")
 export class Remission {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -22,13 +23,15 @@ export class Remission {
   @ManyToOne(() => Client, (client) => client.remissions, { eager: true })
   client!: Client;
 
-  @ManyToOne(() => Payment, (payment) => payment.remissions, { nullable: true })
-  payment!: Payment | null; // Relación opcional con pagos
-
-  @OneToMany(() => RemissionDetail, (detail) => detail.remission, {
-    cascade: true,
-  })
+  @OneToMany(() => RemissionDetail, (detail) => detail.remission, { cascade: true })
   details!: RemissionDetail[];
+
+  @ManyToMany(() => Payment, (payment) => payment.remissions)
+  payments!: Payment[];
+ 
+
+  @Column({ type: "boolean", default: false })
+  isPaid!: boolean;
 
   @CreateDateColumn()
   createdAt!: Date;

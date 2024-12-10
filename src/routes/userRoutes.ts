@@ -3,13 +3,11 @@ import express from "express";
 import {
   createUser,
   validateCreateUser,
-  handleValidationErrors,
-  loginUser,
-} from "../controllers/userController";
-import {
   getUsers,
   updateUser,
   deleteUser,
+  handleValidationErrors,
+  loginUser,
 } from "../controllers/userController";
 import { authenticateToken } from "../middlewares/authenticateToken";
 import { checkPermission } from "../middlewares/checkPermission";
@@ -17,7 +15,9 @@ import { checkPermission } from "../middlewares/checkPermission";
 const router = express.Router();
 
 router.post("/login", loginUser);
+
 router.get("/list", authenticateToken, checkPermission("view_users"), getUsers);
+
 router.put(
   "/update/:id",
   authenticateToken,

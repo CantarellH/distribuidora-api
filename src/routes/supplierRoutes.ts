@@ -13,32 +13,32 @@ const router = express.Router();
 
 router.get(
   "/search",
-  authenticateToken,
-  checkPermission("view_suppliers"),
+  // authenticateToken,
+  // checkPermission("view_suppliers"),
   filterSuppliers
 );
 router.get(
   "/",
-  authenticateToken,
-  checkPermission("view_suppliers"),
+  // authenticateToken,
+  // checkPermission("view_suppliers"),
   getSuppliers
 );
 router.post(
   "/",
-  authenticateToken,
-  checkPermission("create_suppliers"),
+  // authenticateToken,
+  // checkPermission("create_suppliers"),
   createSupplier
 );
 router.put(
   "/:id",
-  authenticateToken,
-  checkPermission("update_suppliers"),
+  // authenticateToken,
+  // checkPermission("update_suppliers"),
   updateSupplier
 );
 router.delete(
   "/:id",
-  authenticateToken,
-  checkPermission("delete_suppliers"),
+  // authenticateToken,
+  // checkPermission("delete_suppliers"),
   deleteSupplier
 );
 

@@ -20,25 +20,21 @@ __decorate([
     __metadata("design:type", Number)
 ], RemissionWeightDetail.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => RemissionDetail_1.RemissionDetail, (remissionDetail) => remissionDetail.weightDetails, { eager: true }),
+    (0, typeorm_1.ManyToOne)(() => RemissionDetail_1.RemissionDetail, (detail) => detail.id, { onDelete: "CASCADE" }),
     __metadata("design:type", RemissionDetail_1.RemissionDetail)
 ], RemissionWeightDetail.prototype, "remissionDetail", void 0);
 __decorate([
-    (0, typeorm_1.Column)("float"),
+    (0, typeorm_1.Column)({ type: "float" }),
     __metadata("design:type", Number)
 ], RemissionWeightDetail.prototype, "weight", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: "boolean" }),
+    (0, typeorm_1.Column)({ type: "int" }),
     __metadata("design:type", Boolean)
 ], RemissionWeightDetail.prototype, "byBox", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], RemissionWeightDetail.prototype, "createdAt", void 0);
-__decorate([
-    (0, typeorm_1.UpdateDateColumn)(),
-    __metadata("design:type", Date)
-], RemissionWeightDetail.prototype, "updatedAt", void 0);
 exports.RemissionWeightDetail = RemissionWeightDetail = __decorate([
-    (0, typeorm_1.Entity)()
+    (0, typeorm_1.Entity)("remission_weight_detail")
 ], RemissionWeightDetail);

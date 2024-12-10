@@ -2,24 +2,29 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
 } from "typeorm";
+import { RemissionDetail } from "./RemissionDetail";
 
 @Entity("egg_types")
 export class EggType {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ length: 100 })
+  @Column({ type: "varchar", length: 100 })
   name!: string;
 
-  @Column({ type: "text", nullable: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   description?: string;
 
-  @CreateDateColumn({ name: "created_at" })
+  @OneToMany(() => RemissionDetail, (remissionDetail) => remissionDetail.eggType)
+  remissionDetails!: RemissionDetail[];
+
+  @CreateDateColumn()
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: "updated_at" })
+  @UpdateDateColumn()
   updatedAt!: Date;
 }

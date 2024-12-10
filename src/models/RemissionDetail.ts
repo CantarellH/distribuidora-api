@@ -3,40 +3,42 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
-  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
 } from "typeorm";
 import { Remission } from "./Remission";
 import { EggType } from "./EggType";
 import { Supplier } from "./Supplier";
-import { RemissionWeightDetail } from "./RemissionWeightDetail";
 
-@Entity()
+@Entity("remission_detail")
 export class RemissionDetail {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => Remission, (remission) => remission.details, { eager: true })
-  remission!: Remission; 
+  @ManyToOne(() => Remission, (remission) => remission.details, {
+    onDelete: "CASCADE",
+  })
+  remission!: Remission;
 
-  @ManyToOne(() => EggType, { eager: true })
+  @ManyToOne(() => EggType, (eggType) => eggType.remissionDetails, {
+    eager: true,
+  })
   eggType!: EggType;
 
-  @ManyToOne(() => Supplier, { eager: true })
-  supplier!: Supplier; 
+  @ManyToOne(() => Supplier, (supplier) => supplier.remissionDetails, {
+    eager: true,
+  })
+  supplier!: Supplier;
 
-  @Column()
+  @Column({ type: "int" })
   boxCount!: number;
 
-  @OneToMany(
-    () => RemissionWeightDetail,
-    (weightDetail) => weightDetail.remissionDetail,
-    { cascade: true }
-  )
-  weightDetails!: RemissionWeightDetail[]; 
+  @Column({ type: "double precision" })
+  weightTotal!: number;
+
   @CreateDateColumn()
-  createdAt!: Date; 
+  createdAt!: Date;
+
   @UpdateDateColumn()
-  updatedAt!: Date; 
+  updatedAt!: Date;
 }

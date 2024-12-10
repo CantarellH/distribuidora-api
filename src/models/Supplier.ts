@@ -2,23 +2,30 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToMany,
 } from "typeorm";
-import { InventoryEntry } from "./InventoryEntry";
+import { RemissionDetail } from "./RemissionDetail";
 
 @Entity("suppliers")
 export class Supplier {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ unique: true })
-  name!: string;
+  @Column({ type: "varchar", length: 100, nullable: true }) // Cambiado a nullable: true
+name?: string;
 
-  @Column({ type: "text", nullable: true })
-  contact_info?: string; // Información adicional como teléfono, dirección, etc.
 
-  @OneToMany(() => InventoryEntry, (entry) => entry.supplier)
-  inventoryEntries?: InventoryEntry[];
+  @Column({ type: "varchar", length: 255, nullable: true })
+  contact_info?: string;
+
+  @OneToMany(() => RemissionDetail, (remissionDetail) => remissionDetail.supplier)
+  remissionDetails!: RemissionDetail[];
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
 }

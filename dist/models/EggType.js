@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EggType = void 0;
 const typeorm_1 = require("typeorm");
+const RemissionDetail_1 = require("./RemissionDetail");
 let EggType = class EggType {
 };
 exports.EggType = EggType;
@@ -19,19 +20,23 @@ __decorate([
     __metadata("design:type", Number)
 ], EggType.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ length: 100 }),
+    (0, typeorm_1.Column)({ type: "varchar", length: 100 }),
     __metadata("design:type", String)
 ], EggType.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: "text", nullable: true }),
+    (0, typeorm_1.Column)({ type: "varchar", length: 255, nullable: true }),
     __metadata("design:type", String)
 ], EggType.prototype, "description", void 0);
 __decorate([
-    (0, typeorm_1.CreateDateColumn)({ name: "created_at" }),
+    (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, (remissionDetail) => remissionDetail.eggType),
+    __metadata("design:type", Array)
+], EggType.prototype, "remissionDetails", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], EggType.prototype, "createdAt", void 0);
 __decorate([
-    (0, typeorm_1.UpdateDateColumn)({ name: "updated_at" }),
+    (0, typeorm_1.UpdateDateColumn)(),
     __metadata("design:type", Date)
 ], EggType.prototype, "updatedAt", void 0);
 exports.EggType = EggType = __decorate([

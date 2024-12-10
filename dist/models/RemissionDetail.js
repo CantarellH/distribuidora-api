@@ -14,7 +14,6 @@ const typeorm_1 = require("typeorm");
 const Remission_1 = require("./Remission");
 const EggType_1 = require("./EggType");
 const Supplier_1 = require("./Supplier");
-const RemissionWeightDetail_1 = require("./RemissionWeightDetail");
 let RemissionDetail = class RemissionDetail {
 };
 exports.RemissionDetail = RemissionDetail;
@@ -23,25 +22,31 @@ __decorate([
     __metadata("design:type", Number)
 ], RemissionDetail.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Remission_1.Remission, (remission) => remission.details, { eager: true }),
+    (0, typeorm_1.ManyToOne)(() => Remission_1.Remission, (remission) => remission.details, {
+        onDelete: "CASCADE",
+    }),
     __metadata("design:type", Remission_1.Remission)
 ], RemissionDetail.prototype, "remission", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => EggType_1.EggType, { eager: true }),
+    (0, typeorm_1.ManyToOne)(() => EggType_1.EggType, (eggType) => eggType.remissionDetails, {
+        eager: true,
+    }),
     __metadata("design:type", EggType_1.EggType)
 ], RemissionDetail.prototype, "eggType", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Supplier_1.Supplier, { eager: true }),
+    (0, typeorm_1.ManyToOne)(() => Supplier_1.Supplier, (supplier) => supplier.remissionDetails, {
+        eager: true,
+    }),
     __metadata("design:type", Supplier_1.Supplier)
 ], RemissionDetail.prototype, "supplier", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.Column)({ type: "int" }),
     __metadata("design:type", Number)
 ], RemissionDetail.prototype, "boxCount", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => RemissionWeightDetail_1.RemissionWeightDetail, (weightDetail) => weightDetail.remissionDetail, { cascade: true }),
-    __metadata("design:type", Array)
-], RemissionDetail.prototype, "weightDetails", void 0);
+    (0, typeorm_1.Column)({ type: "double precision" }),
+    __metadata("design:type", Number)
+], RemissionDetail.prototype, "weightTotal", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
@@ -51,5 +56,5 @@ __decorate([
     __metadata("design:type", Date)
 ], RemissionDetail.prototype, "updatedAt", void 0);
 exports.RemissionDetail = RemissionDetail = __decorate([
-    (0, typeorm_1.Entity)()
+    (0, typeorm_1.Entity)("remission_detail")
 ], RemissionDetail);

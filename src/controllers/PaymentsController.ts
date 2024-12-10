@@ -1,15 +1,17 @@
+import {In,} from "typeorm";
 import { Request, Response } from "express";
 import { AppDataSource } from "../config/data-source";
 import { Payment } from "../models/Payment";
 import { Client } from "../models/Client";
 import { Remission } from "../models/Remission";
 
+
 export const createPayment = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { clientId, amount, method, remissionIds } = req.body;
+    const { clientId, remissionIds, amount, method } = req.body;
 
-    if (!clientId || !amount || !method || !Array.isArray(remissionIds)) {
-      res.status(400).json({ error: "Todos los campos son obligatorios." });
+    if (!clientId || !remissionIds || !amount || !method) {
+      res.status(400).json({ error: "Faltan campos obligatorios." });
       return;
     }
 
@@ -17,43 +19,64 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     const remissionRepository = AppDataSource.getRepository(Remission);
     const paymentRepository = AppDataSource.getRepository(Payment);
 
-    const client = await clientRepository.findOne({ where: { id: clientId } });
+    const client = await clientRepository.findOne({
+      where: { id: clientId },
+    });
+
     if (!client) {
       res.status(404).json({ error: "Cliente no encontrado." });
       return;
     }
 
-    const remissions = await remissionRepository.findByIds(remissionIds);
+    const remissions = await remissionRepository.findBy({
+      id: In(remissionIds),
+    });
+
     if (remissions.length !== remissionIds.length) {
-      res
-        .status(404)
-        .json({ error: "Una o más remisiones no fueron encontradas." });
+      res.status(400).json({ error: "Algunas remisiones no existen." });
       return;
     }
 
     const newPayment = paymentRepository.create({
       client,
+      remissions,
       amount,
       method,
-      remissions,
     });
-
     await paymentRepository.save(newPayment);
 
-    // Actualizar remisiones con el nuevo pago
+    // Actualizar el estado de las remisiones
     for (const remission of remissions) {
-      remission.payment = newPayment;
-      await remissionRepository.save(remission);
+      const totalPaid = remission.payments.reduce(
+        (sum, payment) => sum + payment.amount,
+        0
+      ) + amount;
+
+      const totalAmount = remission.details.reduce(
+        (sum, detail) => sum + detail.weightTotal * detail.boxCount,
+        0
+      );
+
+      if (totalPaid >= totalAmount) {
+        remission.isPaid = true;
+        await remissionRepository.save(remission);
+      }
     }
 
-    res.status(201).json({ message: "Pago creado con éxito.", payment: newPayment });
+    res.status(201).json({
+      message: "Pago registrado y remisiones actualizadas.",
+      payment: newPayment,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error interno del servidor." });
   }
 };
 
-export const getPayments = async (req: Request, res: Response): Promise<void> => {
+export const getPayments = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const paymentRepository = AppDataSource.getRepository(Payment);
     const payments = await paymentRepository.find({
@@ -67,7 +90,10 @@ export const getPayments = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const getPaymentById = async (req: Request, res: Response): Promise<void> => {
+export const getPaymentById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -89,14 +115,19 @@ export const getPaymentById = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const updatePayment = async (req: Request, res: Response): Promise<void> => {
+export const updatePayment = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const { amount, method } = req.body;
 
     const paymentRepository = AppDataSource.getRepository(Payment);
 
-    const payment = await paymentRepository.findOne({ where: { id: parseInt(id, 10) } });
+    const payment = await paymentRepository.findOne({
+      where: { id: parseInt(id, 10) },
+    });
     if (!payment) {
       res.status(404).json({ error: "Pago no encontrado." });
       return;
@@ -107,14 +138,22 @@ export const updatePayment = async (req: Request, res: Response): Promise<void> 
 
     const updatedPayment = await paymentRepository.save(payment);
 
-    res.status(200).json({ message: "Pago actualizado con éxito.", payment: updatedPayment });
+    res
+      .status(200)
+      .json({
+        message: "Pago actualizado con éxito.",
+        payment: updatedPayment,
+      });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error interno del servidor." });
   }
 };
 
-export const deletePayment = async (req: Request, res: Response): Promise<void> => {
+export const deletePayment = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
 
@@ -133,13 +172,78 @@ export const deletePayment = async (req: Request, res: Response): Promise<void> 
 
     // Eliminar referencia del pago en las remisiones
     for (const remission of payment.remissions) {
-      remission.payment = null;
+      remission.payments = [];
       await remissionRepository.save(remission);
     }
 
     await paymentRepository.remove(payment);
 
     res.status(200).json({ message: "Pago eliminado con éxito." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
+};
+export const filterPayments = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { clientId, startDate, endDate, method, minAmount, maxAmount } =
+      req.query;
+
+    const paymentRepository = AppDataSource.getRepository(Payment);
+    const query = paymentRepository.createQueryBuilder("payment");
+
+    query
+      .leftJoinAndSelect("payment.client", "client")
+      .leftJoinAndSelect("payment.remissions", "remissions");
+
+    // Filtro por cliente
+    if (clientId) {
+      query.andWhere("payment.client = :clientId", {
+        clientId: parseInt(clientId as string, 10),
+      });
+    }
+
+    // Filtro por rango de fechas
+    if (startDate && endDate) {
+      const parsedStartDate = new Date(startDate as string);
+      const parsedEndDate = new Date(endDate as string);
+
+      if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+        res.status(400).json({ error: "Fechas inválidas" });
+        return;
+      }
+
+      query.andWhere("payment.createdAt BETWEEN :startDate AND :endDate", {
+        startDate: parsedStartDate.toISOString(),
+        endDate: parsedEndDate.toISOString(),
+      });
+    }
+
+    // Filtro por método de pago
+    if (method) {
+      query.andWhere("payment.method = :method", { method });
+    }
+
+    // Filtro por rango de montos
+    if (minAmount || maxAmount) {
+      if (minAmount) {
+        query.andWhere("payment.amount >= :minAmount", {
+          minAmount: parseFloat(minAmount as string),
+        });
+      }
+      if (maxAmount) {
+        query.andWhere("payment.amount <= :maxAmount", {
+          maxAmount: parseFloat(maxAmount as string),
+        });
+      }
+    }
+
+    // Obtener los pagos filtrados
+    const payments = await query.getMany();
+    res.status(200).json(payments);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error interno del servidor." });

@@ -25,7 +25,7 @@ __decorate([
     __metadata("design:type", Client_1.Client)
 ], Payment.prototype, "client", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => Remission_1.Remission, (remission) => remission.payment),
+    (0, typeorm_1.OneToMany)(() => Remission_1.Remission, (remission) => remission.payments),
     __metadata("design:type", Array)
 ], Payment.prototype, "remissions", void 0);
 __decorate([
@@ -37,9 +37,9 @@ __decorate([
     __metadata("design:type", String)
 ], Payment.prototype, "method", void 0);
 __decorate([
-    (0, typeorm_1.CreateDateColumn)({ type: "timestamp" }),
+    (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], Payment.prototype, "createdAt", void 0);
 exports.Payment = Payment = __decorate([
-    (0, typeorm_1.Entity)()
+    (0, typeorm_1.Entity)("payments")
 ], Payment);

@@ -25,7 +25,7 @@ const createRemission = (req, res) => __awaiter(void 0, void 0, void 0, function
             remissionDetail.eggType = { id: detail.eggTypeId };
             remissionDetail.supplier = { id: detail.supplierId };
             remissionDetail.boxCount = detail.boxCount;
-            remissionDetail.weightDetails = detail.weights.map((weight) => {
+            remissionDetail.weightTotal = detail.weights.map((weight) => {
                 const weightDetail = new RemissionWeightDetail_1.RemissionWeightDetail();
                 weightDetail.weight = weight.value;
                 weightDetail.byBox = weight.byBox;
@@ -41,17 +41,17 @@ const createRemission = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
 });
 exports.createRemission = createRemission;
-const getRemissions = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getRemissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const remissionRepo = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
-        const remissions = yield remissionRepo.find({
-            relations: ["client", "details", "details.eggType", "details.supplier", "details.weightDetails"],
+        const remissionRepository = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
+        const remissions = yield remissionRepository.find({
+            relations: ["client", "details", "details.eggType", "payments"],
         });
-        res.json(remissions);
+        res.status(200).json(remissions);
     }
     catch (error) {
-        const err = error;
-        res.status(500).json({ error: err.message });
+        console.error(error);
+        res.status(500).json({ error: "Error interno del servidor." });
     }
 });
 exports.getRemissions = getRemissions;

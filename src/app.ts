@@ -8,6 +8,7 @@ import suppliers from "./routes/supplierRoutes";
 import inventory from "./routes/inventoryRoutes";
 import clients from "./routes/clientRoutes";
 import remissions from "./routes/remissionsRoutes";
+import payments from "./routes/paymentRoutes";
 
 dotenv.config();
 
@@ -26,5 +27,6 @@ app.use("/api/suppliers", suppliers);
 app.use("/api/inventory", inventory);
 app.use("/api/clients", clients);
 app.use("/api/remissions", remissions);
+app.use("/api/payments", payments);
 
 export default app;

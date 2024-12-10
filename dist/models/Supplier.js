@@ -11,7 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Supplier = void 0;
 const typeorm_1 = require("typeorm");
-const InventoryEntry_1 = require("./InventoryEntry");
+const RemissionDetail_1 = require("./RemissionDetail");
 let Supplier = class Supplier {
 };
 exports.Supplier = Supplier;
@@ -20,17 +20,25 @@ __decorate([
     __metadata("design:type", Number)
 ], Supplier.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ unique: true }),
+    (0, typeorm_1.Column)({ type: "varchar", length: 100 }),
     __metadata("design:type", String)
 ], Supplier.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: "text", nullable: true }),
+    (0, typeorm_1.Column)({ type: "varchar", length: 255, nullable: true }),
     __metadata("design:type", String)
 ], Supplier.prototype, "contact_info", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => InventoryEntry_1.InventoryEntry, (entry) => entry.supplier),
+    (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, (remissionDetail) => remissionDetail.supplier),
     __metadata("design:type", Array)
-], Supplier.prototype, "inventoryEntries", void 0);
+], Supplier.prototype, "remissionDetails", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)(),
+    __metadata("design:type", Date)
+], Supplier.prototype, "createdAt", void 0);
+__decorate([
+    (0, typeorm_1.UpdateDateColumn)(),
+    __metadata("design:type", Date)
+], Supplier.prototype, "updatedAt", void 0);
 exports.Supplier = Supplier = __decorate([
     (0, typeorm_1.Entity)("suppliers")
 ], Supplier);

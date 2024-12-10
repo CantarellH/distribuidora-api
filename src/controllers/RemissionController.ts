@@ -21,7 +21,7 @@ export const createRemission = async (req: Request, res: Response): Promise<void
             remissionDetail.supplier = { id: detail.supplierId } as any;
             remissionDetail.boxCount = detail.boxCount;
 
-            remissionDetail.weightDetails = detail.weights.map((weight: any) => {
+            remissionDetail.weightTotal = detail.weights.map((weight: any) => {
                 const weightDetail = new RemissionWeightDetail();
                 weightDetail.weight = weight.value;
                 weightDetail.byBox = weight.byBox;
@@ -38,18 +38,21 @@ export const createRemission = async (req: Request, res: Response): Promise<void
     }
 };
 
-export const getRemissions = async (_req: Request, res: Response): Promise<void> => {
+export const getRemissions = async (req: Request, res: Response): Promise<void> => {
     try {
-        const remissionRepo = AppDataSource.getRepository(Remission);
-        const remissions = await remissionRepo.find({
-            relations: ["client", "details", "details.eggType", "details.supplier", "details.weightDetails"],
-        });
-        res.json(remissions);
+      const remissionRepository = AppDataSource.getRepository(Remission);
+  
+      const remissions = await remissionRepository.find({
+        relations: ["client", "details", "details.eggType", "payments"],
+      });
+  
+      res.status(200).json(remissions);
     } catch (error) {
-        const err = error as Error;
-        res.status(500).json({ error: err.message });
+      console.error(error);
+      res.status(500).json({ error: "Error interno del servidor." });
     }
-};
+  };
+  
 
 export const getRemissionById = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;

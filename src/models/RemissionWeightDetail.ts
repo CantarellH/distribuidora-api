@@ -4,27 +4,23 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
-  UpdateDateColumn,
 } from "typeorm";
 import { RemissionDetail } from "./RemissionDetail";
 
-@Entity()
+@Entity("remission_weight_detail")
 export class RemissionWeightDetail {
   @PrimaryGeneratedColumn()
-  id!: number; 
+  id!: number;
 
-  @ManyToOne(() => RemissionDetail, (remissionDetail) => remissionDetail.weightDetails, { eager: true })
-  remissionDetail!: RemissionDetail; 
+  @ManyToOne(() => RemissionDetail, (detail) => detail.id, { onDelete: "CASCADE" })
+  remissionDetail!: RemissionDetail;
 
-  @Column("float")
-  weight!: number; 
+  @Column({ type: "float" })
+  weight!: number;
 
-  @Column({ type: "boolean" })
-  byBox!: boolean; 
+  @Column({ type: "int" })
+  byBox!: boolean;
 
   @CreateDateColumn()
-  createdAt!: Date; 
-
-  @UpdateDateColumn()
-  updatedAt!: Date; 
+  createdAt!: Date;
 }

@@ -3,13 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
-  OneToMany,
   CreateDateColumn,
+  OneToMany,
 } from "typeorm";
 import { Client } from "./Client";
 import { Remission } from "./Remission";
 
-@Entity()
+@Entity("payments")
 export class Payment {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -17,7 +17,7 @@ export class Payment {
   @ManyToOne(() => Client, (client) => client.payments, { onDelete: "CASCADE" })
   client!: Client;
 
-  @OneToMany(() => Remission, (remission) => remission.payment)
+  @OneToMany(() => Remission, (remission) => remission.payments)
   remissions!: Remission[];
 
   @Column({ type: "float" })
@@ -26,6 +26,6 @@ export class Payment {
   @Column({ type: "varchar", length: 255 })
   method!: string;
 
-  @CreateDateColumn({ type: "timestamp" })
+  @CreateDateColumn()
   createdAt!: Date;
 }

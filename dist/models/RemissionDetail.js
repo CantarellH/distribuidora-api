@@ -14,6 +14,7 @@ const typeorm_1 = require("typeorm");
 const Remission_1 = require("./Remission");
 const EggType_1 = require("./EggType");
 const Supplier_1 = require("./Supplier");
+const RemissionWeightDetail_1 = require("./RemissionWeightDetail");
 let RemissionDetail = class RemissionDetail {
 };
 exports.RemissionDetail = RemissionDetail;
@@ -43,6 +44,12 @@ __decorate([
     (0, typeorm_1.Column)({ type: "int" }),
     __metadata("design:type", Number)
 ], RemissionDetail.prototype, "boxCount", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => RemissionWeightDetail_1.RemissionWeightDetail, (weightDetail) => weightDetail.remissionDetail, {
+        cascade: true,
+    }),
+    __metadata("design:type", Array)
+], RemissionDetail.prototype, "weightDetails", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: "double precision" }),
     __metadata("design:type", Number)

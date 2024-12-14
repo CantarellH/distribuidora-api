@@ -21,7 +21,7 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASS || 'C4nt4rell',
   database: process.env.DB_NAME || 'Comercializadora_Carreta',
   synchronize: false,
-  logging: [/* "query", */ "error"],
+  logging: true,
   entities: [
     EggType,
     User,

@@ -20,7 +20,8 @@ __decorate([
     __metadata("design:type", Number)
 ], Supplier.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: "varchar", length: 100 }),
+    (0, typeorm_1.Column)({ type: "varchar", length: 100, nullable: true }) // Cambiado a nullable: true
+    ,
     __metadata("design:type", String)
 ], Supplier.prototype, "name", void 0);
 __decorate([
@@ -28,7 +29,7 @@ __decorate([
     __metadata("design:type", String)
 ], Supplier.prototype, "contact_info", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, (remissionDetail) => remissionDetail.supplier),
+    (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, (detail) => detail.supplier),
     __metadata("design:type", Array)
 ], Supplier.prototype, "remissionDetails", void 0);
 __decorate([

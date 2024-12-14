@@ -10,6 +10,7 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
   try {
     const { clientId, remissionIds, amount, method } = req.body;
 
+    // Validar datos requeridos
     if (!clientId || !remissionIds || !amount || !method) {
       res.status(400).json({ error: "Faltan campos obligatorios." });
       return;
@@ -19,17 +20,17 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
     const remissionRepository = AppDataSource.getRepository(Remission);
     const paymentRepository = AppDataSource.getRepository(Payment);
 
-    const client = await clientRepository.findOne({
-      where: { id: clientId },
-    });
-
+    // Verificar si el cliente existe
+    const client = await clientRepository.findOne({ where: { id: clientId } });
     if (!client) {
       res.status(404).json({ error: "Cliente no encontrado." });
       return;
     }
 
-    const remissions = await remissionRepository.findBy({
-      id: In(remissionIds),
+    // Verificar si las remisiones existen
+    const remissions = await remissionRepository.find({
+      where: { id: In(remissionIds) },
+      relations: ["payments", "details"],
     });
 
     if (remissions.length !== remissionIds.length) {
@@ -37,30 +38,37 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    // Crear el pago
     const newPayment = paymentRepository.create({
       client,
-      remissions,
       amount,
       method,
     });
     await paymentRepository.save(newPayment);
 
-    // Actualizar el estado de las remisiones
+    // Asociar el pago con las remisiones y actualizar su estado
     for (const remission of remissions) {
-      const totalPaid = remission.payments.reduce(
-        (sum, payment) => sum + payment.amount,
-        0
-      ) + amount;
+      // Asegurarse de que remission.payments esté inicializado
+      remission.payments = remission.payments || [];
 
+      // Agregar el nuevo pago a la lista
+      remission.payments.push(newPayment);
+
+      // Calcular el total pagado
+      const totalPaid = remission.payments.reduce((sum, payment) => sum + payment.amount, 0);
+
+      // Calcular el monto total de la remisión
       const totalAmount = remission.details.reduce(
         (sum, detail) => sum + detail.weightTotal * detail.boxCount,
         0
       );
 
+      // Marcar la remisión como pagada si corresponde
       if (totalPaid >= totalAmount) {
         remission.isPaid = true;
-        await remissionRepository.save(remission);
       }
+
+      await remissionRepository.save(remission);
     }
 
     res.status(201).json({
@@ -68,10 +76,11 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
       payment: newPayment,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error al registrar el pago:", error);
     res.status(500).json({ error: "Error interno del servidor." });
   }
 };
+
 
 export const getPayments = async (
   req: Request,

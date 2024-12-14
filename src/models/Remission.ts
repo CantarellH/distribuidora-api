@@ -6,7 +6,8 @@ import {
   ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToMany
+  ManyToMany,
+  JoinTable
 } from "typeorm";
 import { Client } from "./Client";
 import { RemissionDetail } from "./RemissionDetail";
@@ -23,12 +24,14 @@ export class Remission {
   @ManyToOne(() => Client, (client) => client.remissions, { eager: true })
   client!: Client;
 
-  @OneToMany(() => RemissionDetail, (detail) => detail.remission, { cascade: true })
+  @OneToMany(() => RemissionDetail, (detail) => detail.remission, {
+    cascade: true,
+  })
   details!: RemissionDetail[];
 
   @ManyToMany(() => Payment, (payment) => payment.remissions)
+  @JoinTable()
   payments!: Payment[];
- 
 
   @Column({ type: "boolean", default: false })
   isPaid!: boolean;

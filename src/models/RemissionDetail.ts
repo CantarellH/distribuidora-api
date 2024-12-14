@@ -2,6 +2,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  OneToMany,
   ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
@@ -9,12 +10,14 @@ import {
 import { Remission } from "./Remission";
 import { EggType } from "./EggType";
 import { Supplier } from "./Supplier";
+import { RemissionWeightDetail } from "./RemissionWeightDetail";
 
 @Entity("remission_detail")
 export class RemissionDetail {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  
   @ManyToOne(() => Remission, (remission) => remission.details, {
     onDelete: "CASCADE",
   })
@@ -32,6 +35,11 @@ export class RemissionDetail {
 
   @Column({ type: "int" })
   boxCount!: number;
+
+  @OneToMany(() => RemissionWeightDetail, (weightDetail) => weightDetail.remissionDetail, {
+    cascade: true,
+  })
+  weightDetails!: RemissionWeightDetail[];
 
   @Column({ type: "double precision" })
   weightTotal!: number;

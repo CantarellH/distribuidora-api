@@ -18,6 +18,7 @@ const Remission_1 = require("../models/Remission");
 const createPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { clientId, remissionIds, amount, method } = req.body;
+        // Validar datos requeridos
         if (!clientId || !remissionIds || !amount || !method) {
             res.status(400).json({ error: "Faltan campos obligatorios." });
             return;
@@ -25,34 +26,41 @@ const createPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const clientRepository = data_source_1.AppDataSource.getRepository(Client_1.Client);
         const remissionRepository = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
         const paymentRepository = data_source_1.AppDataSource.getRepository(Payment_1.Payment);
-        const client = yield clientRepository.findOne({
-            where: { id: clientId },
-        });
+        // Verificar si el cliente existe
+        const client = yield clientRepository.findOne({ where: { id: clientId } });
         if (!client) {
             res.status(404).json({ error: "Cliente no encontrado." });
             return;
         }
-        const remissions = yield remissionRepository.findBy({
-            id: (0, typeorm_1.In)(remissionIds),
-        });
+        // Verificar si las remisiones existen
+        const remissions = yield remissionRepository.findBy({ id: (0, typeorm_1.In)(remissionIds) });
         if (remissions.length !== remissionIds.length) {
             res.status(400).json({ error: "Algunas remisiones no existen." });
             return;
         }
+        // Crear el pago (sin asignar remisiones aún)
         const newPayment = paymentRepository.create({
             client,
-            remissions,
             amount,
             method,
         });
         yield paymentRepository.save(newPayment);
-        // Actualizar el estado de las remisiones
+        // Asociar el pago con las remisiones
         for (const remission of remissions) {
-            const totalPaid = remission.payments.reduce((sum, payment) => sum + payment.amount, 0) + amount;
+            // Agregar el nuevo pago a la lista de pagos de la remisión
+            remission.payments = [...(remission.payments || []), newPayment];
+            // Guardar la remisión actualizada con el nuevo pago
+            yield remissionRepository.save(remission);
+            // Calcular el total pagado, manejando casos en los que remission.payments esté vacío o indefinido
+            const totalPaid = remission.payments
+                ? remission.payments.reduce((sum, payment) => sum + payment.amount, 0)
+                : 0;
+            // Calcular el total de la remisión basado en los detalles
             const totalAmount = remission.details.reduce((sum, detail) => sum + detail.weightTotal * detail.boxCount, 0);
+            // Marcar la remisión como pagada si el total pagado cubre o excede el monto total
             if (totalPaid >= totalAmount) {
                 remission.isPaid = true;
-                yield remissionRepository.save(remission);
+                yield remissionRepository.save(remission); // Guardar el cambio en el estado de la remisión
             }
         }
         res.status(201).json({
@@ -61,7 +69,7 @@ const createPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
     }
     catch (error) {
-        console.error(error);
+        console.error("Error al registrar el pago:", error);
         res.status(500).json({ error: "Error interno del servidor." });
     }
 });

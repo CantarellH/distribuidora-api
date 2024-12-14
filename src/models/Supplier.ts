@@ -14,13 +14,13 @@ export class Supplier {
   id!: number;
 
   @Column({ type: "varchar", length: 100, nullable: true }) // Cambiado a nullable: true
-name?: string;
-
+  name?: string;
 
   @Column({ type: "varchar", length: 255, nullable: true })
   contact_info?: string;
 
-  @OneToMany(() => RemissionDetail, (remissionDetail) => remissionDetail.supplier)
+
+  @OneToMany(() => RemissionDetail, (detail) => detail.supplier)
   remissionDetails!: RemissionDetail[];
 
   @CreateDateColumn()

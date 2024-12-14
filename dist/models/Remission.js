@@ -30,11 +30,14 @@ __decorate([
     __metadata("design:type", Client_1.Client)
 ], Remission.prototype, "client", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, (detail) => detail.remission, { cascade: true }),
+    (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, (detail) => detail.remission, {
+        cascade: true,
+    }),
     __metadata("design:type", Array)
 ], Remission.prototype, "details", void 0);
 __decorate([
     (0, typeorm_1.ManyToMany)(() => Payment_1.Payment, (payment) => payment.remissions),
+    (0, typeorm_1.JoinTable)(),
     __metadata("design:type", Array)
 ], Remission.prototype, "payments", void 0);
 __decorate([

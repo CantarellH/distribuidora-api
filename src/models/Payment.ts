@@ -8,19 +8,17 @@ import {
 } from "typeorm";
 import { Client } from "./Client";
 import { Remission } from "./Remission";
+import { PaymentDetail } from "./PaymentDetail";
 
 @Entity("payments")
 export class Payment {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => Client, (client) => client.payments, { onDelete: "CASCADE" })
+  @ManyToOne(() => Client, client => client.payments, { onDelete: "CASCADE" })
   client!: Client;
 
-  @OneToMany(() => Remission, (remission) => remission.payments)
-  remissions!: Remission[];
-
-  @Column({ type: "float" })
+  @Column({ type: "decimal", precision: 10, scale: 2 })
   amount!: number;
 
   @Column({ type: "varchar", length: 255 })
@@ -28,4 +26,8 @@ export class Payment {
 
   @CreateDateColumn()
   createdAt!: Date;
+
+  @OneToMany(() => PaymentDetail, paymentDetail => paymentDetail.payment, { cascade: true })
+  paymentDetails!: PaymentDetail[];
 }
+

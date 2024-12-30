@@ -1,9 +1,12 @@
 import { Router } from "express";
 import {
   createRemission,
+  createRemissionDetail,
   getRemissions,
+  getRemissionDetail,
   getRemissionById,
   updateRemission,
+  updateRemissionDetail,
   deleteRemission,
   filterRemissions,
 } from "../controllers/RemissionController";

@@ -11,9 +11,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Remission = void 0;
 const typeorm_1 = require("typeorm");
-const Client_1 = require("./Client");
+const Client_1 = require("./Client"); // Asegúrate de tener definido el modelo Client adecuadamente.
 const RemissionDetail_1 = require("./RemissionDetail");
-const Payment_1 = require("./Payment");
+const PaymentDetail_1 = require("./PaymentDetail");
 let Remission = class Remission {
 };
 exports.Remission = Remission;
@@ -22,24 +22,21 @@ __decorate([
     __metadata("design:type", Number)
 ], Remission.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
-    __metadata("design:type", Date)
-], Remission.prototype, "date", void 0);
-__decorate([
-    (0, typeorm_1.ManyToOne)(() => Client_1.Client, (client) => client.remissions, { eager: true }),
+    (0, typeorm_1.ManyToOne)(() => Client_1.Client, client => client.remissions),
     __metadata("design:type", Client_1.Client)
 ], Remission.prototype, "client", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, (detail) => detail.remission, {
-        cascade: true,
-    }),
+    (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, detail => detail.remission, { cascade: true }),
     __metadata("design:type", Array)
 ], Remission.prototype, "details", void 0);
 __decorate([
-    (0, typeorm_1.ManyToMany)(() => Payment_1.Payment, (payment) => payment.remissions),
-    (0, typeorm_1.JoinTable)(),
-    __metadata("design:type", Array)
-], Remission.prototype, "payments", void 0);
+    (0, typeorm_1.Column)({ type: "date" }),
+    __metadata("design:type", Date)
+], Remission.prototype, "date", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "decimal", precision: 10, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], Remission.prototype, "totalCost", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: "boolean", default: false }),
     __metadata("design:type", Boolean)
@@ -52,6 +49,10 @@ __decorate([
     (0, typeorm_1.UpdateDateColumn)(),
     __metadata("design:type", Date)
 ], Remission.prototype, "updatedAt", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => PaymentDetail_1.PaymentDetail, paymentDetail => paymentDetail.remission, { cascade: true }),
+    __metadata("design:type", Array)
+], Remission.prototype, "paymentDetails", void 0);
 exports.Remission = Remission = __decorate([
     (0, typeorm_1.Entity)("remissions")
 ], Remission);

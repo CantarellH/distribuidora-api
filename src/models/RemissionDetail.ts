@@ -1,52 +1,37 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToMany,
-  ManyToOne,
-  CreateDateColumn,
-  UpdateDateColumn,
+  Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany
 } from "typeorm";
 import { Remission } from "./Remission";
-import { EggType } from "./EggType";
-import { Supplier } from "./Supplier";
-import { RemissionWeightDetail } from "./RemissionWeightDetail";
+import { BoxWeight } from "./BoxWeight";
+import { EggType } from "./EggType";  // Asumimos que tienes un modelo para EggType.
+import { Supplier } from "./Supplier";  // Asumimos que tienes un modelo para Supplier.
 
-@Entity("remission_detail")
+@Entity()
 export class RemissionDetail {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  
-  @ManyToOne(() => Remission, (remission) => remission.details, {
-    onDelete: "CASCADE",
-  })
+  @ManyToOne(() => Remission, remission => remission.details, { onDelete: "CASCADE" })
   remission!: Remission;
 
-  @ManyToOne(() => EggType, (eggType) => eggType.remissionDetails, {
-    eager: true,
-  })
+  @ManyToOne(() => EggType)
   eggType!: EggType;
 
-  @ManyToOne(() => Supplier, (supplier) => supplier.remissionDetails, {
-    eager: true,
-  })
+  @ManyToOne(() => Supplier)
   supplier!: Supplier;
 
   @Column({ type: "int" })
-  boxCount!: number;
+  boxCount!: number; // Número de cajas en la salida
 
-  @OneToMany(() => RemissionWeightDetail, (weightDetail) => weightDetail.remissionDetail, {
-    cascade: true,
-  })
-  weightDetails!: RemissionWeightDetail[];
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
+  weightTotal!: number; // Peso total calculado o acumulado de las cajas
 
-  @Column({ type: "double precision" })
-  weightTotal!: number;
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
+  estimatedWeightPerBox!: number; // Peso estimado por caja (para tarimas)
 
-  @CreateDateColumn()
-  createdAt!: Date;
+  @Column({ type: "boolean", default: false })
+  isByBox!: boolean;   // Si es por caja (`true`) o tarima (`false`)
 
-  @UpdateDateColumn()
-  updatedAt!: Date;
+  @OneToMany(() => BoxWeight, boxWeight => boxWeight.remissionDetail, { cascade: true })
+  boxWeights!: BoxWeight[]; // Pesos individuales por caja
 }

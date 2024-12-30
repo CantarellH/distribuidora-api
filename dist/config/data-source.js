@@ -13,8 +13,9 @@ const InventoryEntryDetail_1 = require("../models/InventoryEntryDetail");
 const RemissionDetail_1 = require("../models/RemissionDetail");
 const Remission_1 = require("../models/Remission");
 const Client_1 = require("../models/Client");
-const RemissionWeightDetail_1 = require("../models/RemissionWeightDetail");
+const BoxWeight_1 = require("../models/BoxWeight");
 const Payment_1 = require("../models/Payment");
+const PaymentDetail_1 = require("../models/PaymentDetail");
 exports.AppDataSource = new typeorm_1.DataSource({
     type: 'postgres',
     host: process.env.DB_HOST || 'localhost',
@@ -35,7 +36,8 @@ exports.AppDataSource = new typeorm_1.DataSource({
         RemissionDetail_1.RemissionDetail,
         Remission_1.Remission,
         Client_1.Client,
-        RemissionWeightDetail_1.RemissionWeightDetail,
-        Payment_1.Payment
+        BoxWeight_1.BoxWeight,
+        Payment_1.Payment,
+        PaymentDetail_1.PaymentDetail,
     ],
 });

@@ -10,63 +10,67 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.filterPayments = exports.deletePayment = exports.updatePayment = exports.getPaymentById = exports.getPayments = exports.createPayment = void 0;
-const typeorm_1 = require("typeorm");
 const data_source_1 = require("../config/data-source");
 const Payment_1 = require("../models/Payment");
 const Client_1 = require("../models/Client");
+const PaymentDetail_1 = require("../models/PaymentDetail");
 const Remission_1 = require("../models/Remission");
 const createPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { clientId, remissionIds, amount, method } = req.body;
-        // Validar datos requeridos
-        if (!clientId || !remissionIds || !amount || !method) {
-            res.status(400).json({ error: "Faltan campos obligatorios." });
+        const { clientId, paymentDetails, method } = req.body;
+        if (!clientId ||
+            !paymentDetails ||
+            !method ||
+            paymentDetails.length === 0) {
+            res.status(400).json({
+                error: "Faltan campos obligatorios o detalles de pago están vacíos.",
+            });
             return;
         }
-        const clientRepository = data_source_1.AppDataSource.getRepository(Client_1.Client);
-        const remissionRepository = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
-        const paymentRepository = data_source_1.AppDataSource.getRepository(Payment_1.Payment);
-        // Verificar si el cliente existe
-        const client = yield clientRepository.findOne({ where: { id: clientId } });
+        const client = yield data_source_1.AppDataSource.getRepository(Client_1.Client).findOneBy({
+            id: clientId,
+        });
         if (!client) {
             res.status(404).json({ error: "Cliente no encontrado." });
             return;
         }
-        // Verificar si las remisiones existen
-        const remissions = yield remissionRepository.findBy({ id: (0, typeorm_1.In)(remissionIds) });
-        if (remissions.length !== remissionIds.length) {
-            res.status(400).json({ error: "Algunas remisiones no existen." });
-            return;
-        }
-        // Crear el pago (sin asignar remisiones aún)
+        const paymentRepository = data_source_1.AppDataSource.getRepository(Payment_1.Payment);
+        const paymentDetailRepository = data_source_1.AppDataSource.getRepository(PaymentDetail_1.PaymentDetail);
+        const remissionRepository = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
         const newPayment = paymentRepository.create({
             client,
-            amount,
+            amount: paymentDetails.reduce((sum, detail) => sum + detail.amountAssigned, 0),
             method,
         });
-        yield paymentRepository.save(newPayment);
-        // Asociar el pago con las remisiones
-        for (const remission of remissions) {
-            // Agregar el nuevo pago a la lista de pagos de la remisión
-            remission.payments = [...(remission.payments || []), newPayment];
-            // Guardar la remisión actualizada con el nuevo pago
-            yield remissionRepository.save(remission);
-            // Calcular el total pagado, manejando casos en los que remission.payments esté vacío o indefinido
-            const totalPaid = remission.payments
-                ? remission.payments.reduce((sum, payment) => sum + payment.amount, 0)
-                : 0;
-            // Calcular el total de la remisión basado en los detalles
-            const totalAmount = remission.details.reduce((sum, detail) => sum + detail.weightTotal * detail.boxCount, 0);
-            // Marcar la remisión como pagada si el total pagado cubre o excede el monto total
-            if (totalPaid >= totalAmount) {
-                remission.isPaid = true;
-                yield remissionRepository.save(remission); // Guardar el cambio en el estado de la remisión
+        const savedPayment = yield paymentRepository.save(newPayment);
+        for (const detail of paymentDetails) {
+            const remission = yield remissionRepository.findOne({
+                where: { id: detail.remissionId },
+                relations: ["paymentDetails"],
+            });
+            if (!remission) {
+                continue;
             }
+            const totalPaidPreviously = remission.paymentDetails.reduce((sum, pd) => sum + pd.amountAssigned, 0);
+            const newTotalPaid = totalPaidPreviously + detail.amountAssigned;
+            if (newTotalPaid > remission.totalCost) {
+                res.status(400).json({
+                    error: `El pago excede el monto total de la remisión ${detail.remissionId}.`,
+                });
+                return;
+            }
+            const paymentDetail = paymentDetailRepository.create({
+                payment: savedPayment,
+                remission,
+                amountAssigned: detail.amountAssigned,
+            });
+            yield paymentDetailRepository.save(paymentDetail);
+            remission.isPaid = newTotalPaid >= remission.totalCost;
+            yield remissionRepository.save(remission);
         }
-        res.status(201).json({
-            message: "Pago registrado y remisiones actualizadas.",
-            payment: newPayment,
-        });
+        res
+            .status(201)
+            .json({ message: "Pago registrado con éxito.", payment: savedPayment });
     }
     catch (error) {
         console.error("Error al registrar el pago:", error);
@@ -76,14 +80,13 @@ const createPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 exports.createPayment = createPayment;
 const getPayments = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const paymentRepository = data_source_1.AppDataSource.getRepository(Payment_1.Payment);
-        const payments = yield paymentRepository.find({
-            relations: ["client", "remissions"],
+        const payments = yield data_source_1.AppDataSource.getRepository(Payment_1.Payment).find({
+            relations: ["client", "paymentDetails", "paymentDetails.remission"],
         });
-        res.status(200).json(payments);
+        res.json(payments);
     }
     catch (error) {
-        console.error(error);
+        console.error("Error al obtener los pagos:", error);
         res.status(500).json({ error: "Error interno del servidor." });
     }
 });
@@ -94,7 +97,7 @@ const getPaymentById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const paymentRepository = data_source_1.AppDataSource.getRepository(Payment_1.Payment);
         const payment = yield paymentRepository.findOne({
             where: { id: parseInt(id, 10) },
-            relations: ["client", "remissions"],
+            relations: ["client", "paymentDetails", "paymentDetails.remission"]
         });
         if (!payment) {
             res.status(404).json({ error: "Pago no encontrado." });
@@ -103,7 +106,7 @@ const getPaymentById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(200).json(payment);
     }
     catch (error) {
-        console.error(error);
+        console.error("Error al obtener el pago por ID:", error);
         res.status(500).json({ error: "Error interno del servidor." });
     }
 });
@@ -115,25 +118,32 @@ const updatePayment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const paymentRepository = data_source_1.AppDataSource.getRepository(Payment_1.Payment);
         const payment = yield paymentRepository.findOne({
             where: { id: parseInt(id, 10) },
+            relations: ["paymentDetails"]
         });
         if (!payment) {
             res.status(404).json({ error: "Pago no encontrado." });
             return;
         }
-        if (amount)
+        if (amount) {
+            const totalAssigned = payment.paymentDetails.reduce((sum, pd) => sum + pd.amountAssigned, 0);
+            if (amount < totalAssigned) {
+                res.status(400).json({
+                    error: "El monto total no puede ser menor a la suma asignada a las remisiones."
+                });
+                return;
+            }
             payment.amount = amount;
+        }
         if (method)
             payment.method = method;
         const updatedPayment = yield paymentRepository.save(payment);
-        res
-            .status(200)
-            .json({
+        res.status(200).json({
             message: "Pago actualizado con éxito.",
-            payment: updatedPayment,
+            payment: updatedPayment
         });
     }
     catch (error) {
-        console.error(error);
+        console.error("Error al actualizar el pago:", error);
         res.status(500).json({ error: "Error interno del servidor." });
     }
 });
@@ -142,25 +152,28 @@ const deletePayment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     try {
         const { id } = req.params;
         const paymentRepository = data_source_1.AppDataSource.getRepository(Payment_1.Payment);
-        const remissionRepository = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
+        const paymentDetailRepository = data_source_1.AppDataSource.getRepository(PaymentDetail_1.PaymentDetail);
         const payment = yield paymentRepository.findOne({
             where: { id: parseInt(id, 10) },
-            relations: ["remissions"],
+            relations: ["paymentDetails", "paymentDetails.remission"]
         });
         if (!payment) {
             res.status(404).json({ error: "Pago no encontrado." });
             return;
         }
-        // Eliminar referencia del pago en las remisiones
-        for (const remission of payment.remissions) {
-            remission.payments = [];
-            yield remissionRepository.save(remission);
+        for (const detail of payment.paymentDetails) {
+            const remission = detail.remission;
+            yield paymentDetailRepository.remove(detail);
+            // Recalcular el total pagado de la remisión
+            const totalPaid = remission.paymentDetails.reduce((sum, pd) => sum + pd.amountAssigned, 0);
+            remission.isPaid = totalPaid >= remission.totalCost;
+            yield data_source_1.AppDataSource.getRepository(Remission_1.Remission).save(remission);
         }
         yield paymentRepository.remove(payment);
         res.status(200).json({ message: "Pago eliminado con éxito." });
     }
     catch (error) {
-        console.error(error);
+        console.error("Error al eliminar el pago:", error);
         res.status(500).json({ error: "Error interno del servidor." });
     }
 });
@@ -169,52 +182,45 @@ const filterPayments = (req, res) => __awaiter(void 0, void 0, void 0, function*
     try {
         const { clientId, startDate, endDate, method, minAmount, maxAmount } = req.query;
         const paymentRepository = data_source_1.AppDataSource.getRepository(Payment_1.Payment);
-        const query = paymentRepository.createQueryBuilder("payment");
-        query
+        const query = paymentRepository.createQueryBuilder("payment")
             .leftJoinAndSelect("payment.client", "client")
-            .leftJoinAndSelect("payment.remissions", "remissions");
-        // Filtro por cliente
+            .leftJoinAndSelect("payment.paymentDetails", "paymentDetails")
+            .leftJoinAndSelect("paymentDetails.remission", "remission");
         if (clientId) {
-            query.andWhere("payment.client = :clientId", {
-                clientId: parseInt(clientId, 10),
-            });
+            query.andWhere("client.id = :clientId", { clientId: parseInt(clientId, 10) });
         }
-        // Filtro por rango de fechas
         if (startDate && endDate) {
             const parsedStartDate = new Date(startDate);
             const parsedEndDate = new Date(endDate);
             if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
-                res.status(400).json({ error: "Fechas inválidas" });
+                res.status(400).json({ error: "Fechas inválidas." });
                 return;
             }
             query.andWhere("payment.createdAt BETWEEN :startDate AND :endDate", {
                 startDate: parsedStartDate.toISOString(),
-                endDate: parsedEndDate.toISOString(),
+                endDate: parsedEndDate.toISOString()
             });
         }
-        // Filtro por método de pago
         if (method) {
             query.andWhere("payment.method = :method", { method });
         }
-        // Filtro por rango de montos
         if (minAmount || maxAmount) {
             if (minAmount) {
                 query.andWhere("payment.amount >= :minAmount", {
-                    minAmount: parseFloat(minAmount),
+                    minAmount: parseFloat(minAmount)
                 });
             }
             if (maxAmount) {
                 query.andWhere("payment.amount <= :maxAmount", {
-                    maxAmount: parseFloat(maxAmount),
+                    maxAmount: parseFloat(maxAmount)
                 });
             }
         }
-        // Obtener los pagos filtrados
         const payments = yield query.getMany();
         res.status(200).json(payments);
     }
     catch (error) {
-        console.error(error);
+        console.error("Error al filtrar los pagos:", error);
         res.status(500).json({ error: "Error interno del servidor." });
     }
 });

@@ -10,8 +10,9 @@ import { InventoryEntryDetail } from '../models/InventoryEntryDetail';
 import { RemissionDetail } from '../models/RemissionDetail';
 import { Remission } from '../models/Remission';
 import { Client } from '../models/Client';
-import { RemissionWeightDetail } from '../models/RemissionWeightDetail';
+import { BoxWeight } from '../models/BoxWeight';
 import { Payment } from '../models/Payment';
+import { PaymentDetail } from '../models/PaymentDetail';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -33,7 +34,8 @@ export const AppDataSource = new DataSource({
     RemissionDetail,
     Remission,
     Client,
-    RemissionWeightDetail,
-    Payment
+    BoxWeight,
+    Payment,
+    PaymentDetail,
   ],
 });

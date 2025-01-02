@@ -1,17 +1,23 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
 } from "typeorm";
 import { Remission } from "./Remission";
 import { BoxWeight } from "./BoxWeight";
-import { EggType } from "./EggType";  // Asumimos que tienes un modelo para EggType.
-import { Supplier } from "./Supplier";  // Asumimos que tienes un modelo para Supplier.
+import { EggType } from "./EggType"; // Asumimos que tienes un modelo para EggType.
+import { Supplier } from "./Supplier"; // Asumimos que tienes un modelo para Supplier.
 
 @Entity()
 export class RemissionDetail {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => Remission, remission => remission.details, { onDelete: "CASCADE" })
+  @ManyToOne(() => Remission, (remission) => remission.details, {
+    onDelete: "CASCADE",
+  })
   remission!: Remission;
 
   @ManyToOne(() => EggType)
@@ -30,8 +36,13 @@ export class RemissionDetail {
   estimatedWeightPerBox!: number; // Peso estimado por caja (para tarimas)
 
   @Column({ type: "boolean", default: false })
-  isByBox!: boolean;   // Si es por caja (`true`) o tarima (`false`)
+  isByBox!: boolean; // Si es por caja (`true`) o tarima (`false`)
 
-  @OneToMany(() => BoxWeight, boxWeight => boxWeight.remissionDetail, { cascade: true })
+  @OneToMany(() => BoxWeight, (boxWeight) => boxWeight.remissionDetail, {
+    cascade: true,
+  })
   boxWeights!: BoxWeight[]; // Pesos individuales por caja
+ 
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
+  pricePerKilo!: number; // Precio por kilo para calcular el costo total
 }

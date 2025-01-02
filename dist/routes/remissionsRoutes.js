@@ -7,6 +7,10 @@ router.post("/",
 // authenticateToken,
 // checkPermission("create_remission"),
 RemissionController_1.createRemission);
+router.post("/detail", 
+// authenticateToken,
+// checkPermission("create_remission"),
+RemissionController_1.createRemissionDetail);
 router.get("/search", 
 // authenticateToken,
 // checkPermission("view_remission"),
@@ -15,6 +19,10 @@ router.get("/",
 // authenticateToken,
 // checkPermission("view_remission"),
 RemissionController_1.getRemissions);
+router.get("/detail", 
+// authenticateToken,
+// checkPermission("view_remission"),
+RemissionController_1.getRemissionDetail);
 router.get("/:id(\\d+)", 
 // authenticateToken,
 // checkPermission("view_remission"),
@@ -23,6 +31,10 @@ router.put("/:id",
 // authenticateToken,
 // checkPermission("update_remission"),
 RemissionController_1.updateRemission);
+router.put("/detail/:id", 
+// authenticateToken,
+// checkPermission("update_remission"),
+RemissionController_1.updateRemissionDetail);
 router.delete("/:id", 
 // authenticateToken,
 // checkPermission("delete_remission"),

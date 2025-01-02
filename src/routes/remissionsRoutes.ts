@@ -21,6 +21,12 @@ router.post(
   // checkPermission("create_remission"),
   createRemission
 );
+router.post(
+  "/detail",
+  // authenticateToken,
+  // checkPermission("create_remission"),
+  createRemissionDetail
+);
 
 router.get(
   "/search",
@@ -33,6 +39,12 @@ router.get(
   // authenticateToken,
   // checkPermission("view_remission"),
   getRemissions
+);
+router.get(
+  "/detail",
+  // authenticateToken,
+  // checkPermission("view_remission"),
+  getRemissionDetail
 );
 
 router.get(
@@ -48,6 +60,13 @@ router.put(
   // authenticateToken,
   // checkPermission("update_remission"),
   updateRemission
+);
+
+router.put(
+  "/detail/:id",
+  // authenticateToken,
+  // checkPermission("update_remission"),
+  updateRemissionDetail
 );
 
 router.delete(

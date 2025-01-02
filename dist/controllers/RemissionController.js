@@ -37,12 +37,13 @@ const createRemission = (req, res) => __awaiter(void 0, void 0, void 0, function
         const remissionRepository = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
         const remission = remissionRepository.create({ date, client });
         const savedRemission = yield remissionRepository.save(remission);
-        // Si se incluyen detalles en la solicitud, crear cada uno
+        let totalWeight = 0; // Peso total acumulado de la remisión
+        let totalCost = 0; // Costo total acumulado de la remisión
         if (details && Array.isArray(details)) {
             const remissionDetailRepository = data_source_1.AppDataSource.getRepository(RemissionDetail_1.RemissionDetail);
             for (const detail of details) {
-                const { eggTypeId, supplierId, boxCount, isByBox, weights, estimatedWeightPerBox, } = detail;
-                if (!eggTypeId || !supplierId || !boxCount || isByBox === undefined) {
+                const { eggTypeId, supplierId, boxCount, weights, weightTotal, pricePerKilo, } = detail;
+                if (!eggTypeId || !supplierId || !boxCount || !pricePerKilo) {
                     res.status(400).json({
                         error: "Detalles de remisión inválidos. Faltan campos obligatorios.",
                     });
@@ -60,21 +61,43 @@ const createRemission = (req, res) => __awaiter(void 0, void 0, void 0, function
                     });
                     return;
                 }
-                const weightTotal = isByBox
-                    ? weights.reduce((total, weight) => total + weight - 2, 0) // Tara de 2 kg
-                    : estimatedWeightPerBox * boxCount;
+                if (weights && weights.length !== boxCount) {
+                    res.status(400).json({
+                        error: "Para salidas por caja, se requieren los pesos individuales.",
+                    });
+                    return;
+                }
+                // Cálculo del peso total
+                const computedWeightTotal = weights
+                    ? weights.reduce((total, weight) => total + weight - 2, 0) // Tara de 2 kg por caja
+                    : weightTotal;
+                if (!computedWeightTotal) {
+                    res.status(400).json({
+                        error: "Debe proporcionar 'weights' para salidas por caja o 'weightTotal' para salidas por tarima.",
+                    });
+                    return;
+                }
+                // Cálculo del peso estimado por caja para tarima
+                const estimatedWeightPerBox = weights
+                    ? 0
+                    : parseFloat(((weightTotal - boxCount * 2) / boxCount).toFixed(2));
+                // Cálculo del costo total del detalle
+                const totalDetailCost = computedWeightTotal * pricePerKilo;
+                totalWeight += computedWeightTotal; // Acumular peso total
+                totalCost += totalDetailCost; // Acumular costo total
                 const remissionDetail = remissionDetailRepository.create({
                     remission: savedRemission,
                     eggType,
                     supplier,
                     boxCount,
-                    isByBox,
-                    weightTotal,
-                    estimatedWeightPerBox: isByBox ? 0 : estimatedWeightPerBox,
+                    isByBox: !!weights, // Si hay pesos, es salida por caja
+                    weightTotal: computedWeightTotal,
+                    estimatedWeightPerBox,
+                    pricePerKilo,
                 });
                 yield remissionDetailRepository.save(remissionDetail);
                 // Guardar pesos individuales si es por caja
-                if (isByBox && weights) {
+                if (weights) {
                     const boxWeightRepository = data_source_1.AppDataSource.getRepository(BoxWeight_1.BoxWeight);
                     for (const weight of weights) {
                         const boxWeight = boxWeightRepository.create({
@@ -86,9 +109,11 @@ const createRemission = (req, res) => __awaiter(void 0, void 0, void 0, function
                 }
             }
         }
-        res
-            .status(201)
-            .json({
+        // Actualizar peso total y costo total en la remisión
+        savedRemission.weightTotal = totalWeight;
+        savedRemission.totalCost = totalCost;
+        yield remissionRepository.save(savedRemission);
+        res.status(201).json({
             message: "Remisión creada con éxito.",
             remission: savedRemission,
         });
@@ -101,11 +126,14 @@ const createRemission = (req, res) => __awaiter(void 0, void 0, void 0, function
 exports.createRemission = createRemission;
 const createRemissionDetail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { remissionId, eggTypeId, supplierId, boxCount, isByBox, weights, estimatedWeightPerBox, } = req.body;
+        const { remissionId, eggTypeId, supplierId, boxCount, isByBox, weights, weightTotal, // Peso total de la tarima
+        pricePerKilo, } = req.body;
         if (!remissionId ||
             !eggTypeId ||
             !supplierId ||
             !boxCount ||
+            !weightTotal ||
+            !pricePerKilo ||
             isByBox === undefined) {
             res.status(400).json({
                 error: "Todos los campos obligatorios deben estar presentes.",
@@ -114,6 +142,7 @@ const createRemissionDetail = (req, res) => __awaiter(void 0, void 0, void 0, fu
         }
         const remission = yield data_source_1.AppDataSource.getRepository(Remission_1.Remission).findOne({
             where: { id: remissionId },
+            relations: ["details"], // Para actualizar los totales
         });
         if (!remission) {
             res.status(404).json({ error: "Remisión no encontrada." });
@@ -133,39 +162,67 @@ const createRemissionDetail = (req, res) => __awaiter(void 0, void 0, void 0, fu
             res.status(404).json({ error: "Proveedor no encontrado." });
             return;
         }
-        if (isByBox && (!weights || weights.length !== boxCount)) {
-            res
-                .status(400)
-                .json({ error: "Se requieren los pesos individuales para cada caja." });
-            return;
-        }
         const remissionDetailRepository = data_source_1.AppDataSource.getRepository(RemissionDetail_1.RemissionDetail);
         const boxWeightRepository = data_source_1.AppDataSource.getRepository(BoxWeight_1.BoxWeight);
-        const weightTotal = isByBox
-            ? weights.reduce((total, weight) => total + weight - 2, 0) // Tara de 2 kg por caja
-            : estimatedWeightPerBox * boxCount;
+        let calculatedWeightTotal;
+        let estimatedWeightPerBox = 0;
+        if (isByBox) {
+            // Validación adicional para pesos individuales
+            if (!weights || weights.length !== boxCount) {
+                res.status(400).json({
+                    error: "Se requieren los pesos individuales para cada caja si la remisión es por caja.",
+                });
+                return;
+            }
+            calculatedWeightTotal = weights.reduce((total, weight) => total + weight - 2, 0); // Restamos la tara de 2 kg por caja
+            // Guardar pesos individuales
+            for (const weight of weights) {
+                const boxWeight = boxWeightRepository.create({
+                    remissionDetail: null, // Temporalmente null hasta que guardemos el detalle
+                    weight: weight - 2, // Restar la tara de 2 kg
+                });
+                yield boxWeightRepository.save(boxWeight);
+            }
+        }
+        else {
+            // Es por tarima
+            estimatedWeightPerBox = parseFloat(((weightTotal - boxCount * 2) / boxCount).toFixed(2)); // Peso estimado por caja
+            calculatedWeightTotal = weightTotal; // Se toma directamente el peso total
+        }
+        // Calcular costo total del detalle
+        const totalDetailCost = calculatedWeightTotal * pricePerKilo;
         const remissionDetail = remissionDetailRepository.create({
             remission,
             eggType,
             supplier,
             boxCount,
             isByBox,
-            weightTotal,
-            estimatedWeightPerBox: isByBox ? 0 : estimatedWeightPerBox,
+            weightTotal: calculatedWeightTotal,
+            estimatedWeightPerBox,
+            pricePerKilo,
         });
-        yield remissionDetailRepository.save(remissionDetail);
+        const savedRemissionDetail = yield remissionDetailRepository.save(remissionDetail);
+        // Si es por caja, actualizar referencia en boxWeights
         if (isByBox && weights) {
+            const savedRemissionDetail = yield remissionDetailRepository.save(remissionDetail);
             for (const weight of weights) {
                 const boxWeight = boxWeightRepository.create({
-                    remissionDetail,
-                    weight: weight - 2, // Restar la tara de 2 kg por caja
+                    remissionDetail: savedRemissionDetail, // Asignar el detalle de la remisión después de guardarlo
+                    weight: weight - 2, // Restar la tara de 2 kg
                 });
                 yield boxWeightRepository.save(boxWeight);
             }
         }
+        // Actualizar los totales de la remisión
+        remission.weightTotal =
+            remission.details.reduce((sum, detail) => sum + detail.weightTotal, 0) +
+                calculatedWeightTotal;
+        remission.totalCost =
+            remission.details.reduce((sum, detail) => sum + detail.pricePerKilo * detail.weightTotal, 0) + totalDetailCost;
+        yield data_source_1.AppDataSource.getRepository(Remission_1.Remission).save(remission);
         res.status(201).json({
             message: "Detalle de remisión creado con éxito.",
-            remissionDetail,
+            remissionDetail: savedRemissionDetail,
         });
     }
     catch (error) {
@@ -260,26 +317,30 @@ exports.filterRemissions = filterRemissions;
 const updateRemissionDetail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const { boxCount, isByBox, weights, estimatedWeightPerBox } = req.body;
+        const { boxCount, isByBox, weights, estimatedWeightPerBox, pricePerKilo, } = req.body;
         const remissionDetailRepository = data_source_1.AppDataSource.getRepository(RemissionDetail_1.RemissionDetail);
         const boxWeightRepository = data_source_1.AppDataSource.getRepository(BoxWeight_1.BoxWeight);
         const remissionDetail = yield remissionDetailRepository.findOne({
             where: { id: parseInt(id, 10) },
-            relations: ["boxWeights"],
+            relations: ["boxWeights", "remission"],
         });
         if (!remissionDetail) {
             res.status(404).json({ error: "Detalle de remisión no encontrado." });
             return;
         }
+        // Actualizar campos básicos
         remissionDetail.boxCount = boxCount || remissionDetail.boxCount;
         remissionDetail.isByBox =
             isByBox !== undefined ? isByBox : remissionDetail.isByBox;
         remissionDetail.estimatedWeightPerBox = isByBox
             ? 0
             : estimatedWeightPerBox || remissionDetail.estimatedWeightPerBox;
+        let weightTotal = 0;
         if (isByBox && weights) {
-            yield boxWeightRepository.delete({ remissionDetail }); // Eliminar pesos antiguos
-            remissionDetail.weightTotal = weights.reduce((total, weight) => total + weight - 2, 0);
+            // Si es por caja, eliminar pesos antiguos y calcular nuevos
+            yield boxWeightRepository.delete({ remissionDetail });
+            weightTotal = weights.reduce((total, weight) => total + weight - 2, // Tara de 2 kg por caja
+            0);
             for (const weight of weights) {
                 const boxWeight = boxWeightRepository.create({
                     remissionDetail,
@@ -289,10 +350,23 @@ const updateRemissionDetail = (req, res) => __awaiter(void 0, void 0, void 0, fu
             }
         }
         else if (!isByBox) {
-            remissionDetail.weightTotal =
-                remissionDetail.estimatedWeightPerBox * remissionDetail.boxCount;
+            // Si no es por caja, calcular peso total basado en el peso estimado por caja
+            weightTotal = remissionDetail.estimatedWeightPerBox * remissionDetail.boxCount;
         }
+        remissionDetail.weightTotal = weightTotal;
+        remissionDetail.pricePerKilo = pricePerKilo || remissionDetail.pricePerKilo;
+        // Actualizar costo total basado en el peso total y el precio por kilo
+        const totalDetailCost = weightTotal * remissionDetail.pricePerKilo;
+        // Actualizar el detalle de la remisión
         yield remissionDetailRepository.save(remissionDetail);
+        // Actualizar el costo total de la remisión principal
+        const remissionRepository = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
+        const remission = remissionDetail.remission;
+        remission.totalCost =
+            (remission.totalCost || 0) -
+                remissionDetail.weightTotal * remissionDetail.pricePerKilo + // Costo anterior
+                totalDetailCost; // Costo actualizado
+        yield remissionRepository.save(remission);
         res.status(200).json({
             message: "Detalle de remisión actualizado con éxito.",
             remissionDetail,
@@ -311,6 +385,7 @@ const updateRemission = (req, res) => __awaiter(void 0, void 0, void 0, function
         const remissionRepository = data_source_1.AppDataSource.getRepository(Remission_1.Remission);
         const remission = yield remissionRepository.findOne({
             where: { id: parseInt(id, 10) },
+            relations: ["details"], // Para actualizar el costo total en caso de cambios
         });
         if (!remission) {
             res.status(404).json({ error: "Remisión no encontrada." });
@@ -327,10 +402,13 @@ const updateRemission = (req, res) => __awaiter(void 0, void 0, void 0, function
             }
             remission.client = client;
         }
+        // Recalcular el costo total basado en los detalles
+        remission.totalCost = remission.details.reduce((total, detail) => total + detail.weightTotal * detail.pricePerKilo, 0);
         yield remissionRepository.save(remission);
-        res
-            .status(200)
-            .json({ message: "Remisión actualizada con éxito.", remission });
+        res.status(200).json({
+            message: "Remisión actualizada con éxito.",
+            remission,
+        });
     }
     catch (error) {
         console.error("Error al actualizar la remisión:", error);

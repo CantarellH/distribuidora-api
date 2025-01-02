@@ -12,9 +12,12 @@ export class BoxWeight {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => RemissionDetail, remissionDetail => remissionDetail.boxWeights, { onDelete: "CASCADE" })
-  remissionDetail!: RemissionDetail;
+  @ManyToOne(() => RemissionDetail, (remissionDetail) => remissionDetail.boxWeights, {
+    nullable: true, // Permitir valores nulos temporalmente
+    onDelete: "CASCADE",
+  })
+  remissionDetail!: RemissionDetail | null;
 
   @Column({ type: "decimal", precision: 10, scale: 2 })
-  weight!: number; // Peso de la caja individual
+  weight!: number; // Peso individual por caja
 }

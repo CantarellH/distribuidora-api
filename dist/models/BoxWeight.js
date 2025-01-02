@@ -20,8 +20,11 @@ __decorate([
     __metadata("design:type", Number)
 ], BoxWeight.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => RemissionDetail_1.RemissionDetail, remissionDetail => remissionDetail.boxWeights, { onDelete: "CASCADE" }),
-    __metadata("design:type", RemissionDetail_1.RemissionDetail)
+    (0, typeorm_1.ManyToOne)(() => RemissionDetail_1.RemissionDetail, (remissionDetail) => remissionDetail.boxWeights, {
+        nullable: true, // Permitir valores nulos temporalmente
+        onDelete: "CASCADE",
+    }),
+    __metadata("design:type", Object)
 ], BoxWeight.prototype, "remissionDetail", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: "decimal", precision: 10, scale: 2 }),

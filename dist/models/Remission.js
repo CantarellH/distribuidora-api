@@ -22,17 +22,23 @@ __decorate([
     __metadata("design:type", Number)
 ], Remission.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Client_1.Client, client => client.remissions),
+    (0, typeorm_1.ManyToOne)(() => Client_1.Client, (client) => client.remissions),
     __metadata("design:type", Client_1.Client)
 ], Remission.prototype, "client", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, detail => detail.remission, { cascade: true }),
+    (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, (detail) => detail.remission, {
+        cascade: true,
+    }),
     __metadata("design:type", Array)
 ], Remission.prototype, "details", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: "date" }),
     __metadata("design:type", Date)
 ], Remission.prototype, "date", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "decimal", precision: 10, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], Remission.prototype, "weightTotal", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: "decimal", precision: 10, scale: 2, default: 0 }),
     __metadata("design:type", Number)
@@ -50,9 +56,15 @@ __decorate([
     __metadata("design:type", Date)
 ], Remission.prototype, "updatedAt", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => PaymentDetail_1.PaymentDetail, paymentDetail => paymentDetail.remission, { cascade: true }),
+    (0, typeorm_1.OneToMany)(() => PaymentDetail_1.PaymentDetail, (paymentDetail) => paymentDetail.remission, {
+        cascade: true,
+    }),
     __metadata("design:type", Array)
 ], Remission.prototype, "paymentDetails", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], Remission.prototype, "shouldBeInvoiced", void 0);
 exports.Remission = Remission = __decorate([
     (0, typeorm_1.Entity)("remissions")
 ], Remission);

@@ -1,5 +1,11 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Client } from "./Client"; // Asegúrate de tener definido el modelo Client adecuadamente.
 import { RemissionDetail } from "./RemissionDetail";
@@ -10,14 +16,19 @@ export class Remission {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => Client, client => client.remissions)
+  @ManyToOne(() => Client, (client) => client.remissions)
   client!: Client;
 
-  @OneToMany(() => RemissionDetail, detail => detail.remission, { cascade: true })
+  @OneToMany(() => RemissionDetail, (detail) => detail.remission, {
+    cascade: true,
+  })
   details!: RemissionDetail[];
 
   @Column({ type: "date" })
-date!: Date;
+  date!: Date;
+
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
+  weightTotal!: number;
 
   @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
   totalCost!: number;
@@ -31,7 +42,10 @@ date!: Date;
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @OneToMany(() => PaymentDetail, paymentDetail => paymentDetail.remission, { cascade: true })
+  @OneToMany(() => PaymentDetail, (paymentDetail) => paymentDetail.remission, {
+    cascade: true,
+  })
   paymentDetails!: PaymentDetail[];
+  @Column({ default: false })
+  shouldBeInvoiced!: boolean;
 }
-

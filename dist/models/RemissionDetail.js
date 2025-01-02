@@ -23,7 +23,9 @@ __decorate([
     __metadata("design:type", Number)
 ], RemissionDetail.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Remission_1.Remission, remission => remission.details, { onDelete: "CASCADE" }),
+    (0, typeorm_1.ManyToOne)(() => Remission_1.Remission, (remission) => remission.details, {
+        onDelete: "CASCADE",
+    }),
     __metadata("design:type", Remission_1.Remission)
 ], RemissionDetail.prototype, "remission", void 0);
 __decorate([
@@ -51,9 +53,15 @@ __decorate([
     __metadata("design:type", Boolean)
 ], RemissionDetail.prototype, "isByBox", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => BoxWeight_1.BoxWeight, boxWeight => boxWeight.remissionDetail, { cascade: true }),
+    (0, typeorm_1.OneToMany)(() => BoxWeight_1.BoxWeight, (boxWeight) => boxWeight.remissionDetail, {
+        cascade: true,
+    }),
     __metadata("design:type", Array)
 ], RemissionDetail.prototype, "boxWeights", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "decimal", precision: 10, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], RemissionDetail.prototype, "pricePerKilo", void 0);
 exports.RemissionDetail = RemissionDetail = __decorate([
     (0, typeorm_1.Entity)()
 ], RemissionDetail);

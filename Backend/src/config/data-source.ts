@@ -11,8 +11,12 @@ import { RemissionDetail } from '../models/RemissionDetail';
 import { Remission } from '../models/Remission';
 import { Client } from '../models/Client';
 import { BoxWeight } from '../models/BoxWeight';
+import { RolePermission } from '../models/RolePermission';
+import { Module } from '../models/Modules';
+import { RoleModule } from '../models/RoleModule';
 import { Payment } from '../models/Payment';
 import { PaymentDetail } from '../models/PaymentDetail';
+
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -25,7 +29,9 @@ export const AppDataSource = new DataSource({
   logging: true,
   entities: [
     EggType,
+    Module,
     User,
+    RoleModule,
     Role,
     Permission,
     Supplier,
@@ -37,5 +43,6 @@ export const AppDataSource = new DataSource({
     BoxWeight,
     Payment,
     PaymentDetail,
+    RolePermission,
   ],
 });

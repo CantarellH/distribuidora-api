@@ -9,11 +9,16 @@ import {
   handleValidationErrors,
   getRoles,
   createRole,
+  getAllPermissions,
 } from "../controllers/roleController";
 
 const router = express.Router();
 
-router.get("/list", authenticateToken, checkPermission("view_roles"), getRoles);
+router.get(
+  "/list",
+   //authenticateToken,
+    //checkPermission("view_roles"), 
+    getRoles);
 router.post(
   "/create",
   // authenticateToken,
@@ -26,6 +31,12 @@ router.post(
   // checkPermission("assign_permissions"),
   assignPermissions
 );
+router.get(
+  "/permissions/all",
+  // authenticateToken,
+  // checkPermission("user_permissions"), 
+  getAllPermissions);
+  
 router.get(
   "/permissions/:userId",
   // authenticateToken,

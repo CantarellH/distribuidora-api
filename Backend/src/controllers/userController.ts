@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { AuthenticatedRequest } from "../types"; // Importa el tipo
 import { AppDataSource } from "../config/data-source";
 import { Role } from "../models/Role";
 import { User } from "../models/User";
@@ -100,7 +101,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
     const user = await userRepository.findOne({
       where: { username },
-      relations: ["role"], // Asegúrate de incluir la relación con el rol
+      relations: ["role"], // ✅ Asegurar que incluimos el rol
     });
 
     if (!user) {
@@ -108,32 +109,42 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Validar contraseña (código omitido para simplicidad)
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      res.status(400).json({ error: "Credenciales inválidas" });
+      return;
+    }
 
-    // Generar el token JWT incluyendo el rol
+    // ✅ Incluir el ID, username, rol y otros datos necesarios en el token
     const token = jwt.sign(
-      { id: user.id, role: user.role.name }, // Incluir el nombre del rol
+      { id: user.id, username: user.username, role: user.role.name },
       process.env.JWT_SECRET || "tu_secreto",
       { expiresIn: "5m" }
     );
 
     res.status(200).json({ token });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };
+
 
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     const userRepository = AppDataSource.getRepository(User);
     const users = await userRepository.find({
-      select: ["id", "username", "role", "status", "created_at", "updated_at"], // Excluir 'password'
+      relations: ['role'], // <--- Aquí cargamos la relación del rol
     });
-    res.status(200).json(users);
+
+    // Excluir la contraseña en la respuesta (si tu modelo la incluye)
+    const usersWithoutPassword = users.map(({ password, ...rest }) => rest);
+
+    res.status(200).json(usersWithoutPassword);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const updateUser = async (
   req: Request,
@@ -237,5 +248,18 @@ export const refreshToken = (req: Request, res: Response): void => {
     );
 
     res.status(200).json({ token: newToken });
+  });
+};
+
+export const me = (req: AuthenticatedRequest, res: Response): void => {
+  if (!req.user) {
+    res.status(404).json({ error: "Usuario no encontrado" });
+    return;
+  }
+
+  res.json({
+    id: req.user.id,
+    name: req.user.username,
+    role: req.user.role,
   });
 };

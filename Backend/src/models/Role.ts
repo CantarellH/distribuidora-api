@@ -1,13 +1,13 @@
+// models/Role.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   OneToMany,
-  ManyToMany,
-  JoinTable,
 } from "typeorm";
 import { User } from "./User";
-import { Permission } from "./Permission";
+import { RolePermission } from "./RolePermission";
+import { RoleModule } from "./RoleModule";
 
 @Entity("roles")
 export class Role {
@@ -23,11 +23,10 @@ export class Role {
   @OneToMany(() => User, (user) => user.role, { nullable: true })
   users?: User[];
 
-  @ManyToMany(() => Permission, (permission) => permission.roles)
-  @JoinTable({
-    name: "role_permissions",
-    joinColumn: { name: "role_id", referencedColumnName: "id" },
-    inverseJoinColumn: { name: "permission_id", referencedColumnName: "id" },
-  })
-  permissions?: Permission[]; // Sin inicializar como array
+  @OneToMany(() => RolePermission, (rolePermission) => rolePermission.role)
+  rolePermissions?: RolePermission[];
+
+  // <-- NUEVO: Relación con RoleModule
+  @OneToMany(() => RoleModule, (roleModule) => roleModule.role)
+  roleModules?: RoleModule[];
 }

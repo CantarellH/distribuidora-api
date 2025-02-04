@@ -7,7 +7,6 @@ import {
   OneToMany,
 } from "typeorm";
 import { Client } from "./Client";
-import { Remission } from "./Remission";
 import { PaymentDetail } from "./PaymentDetail";
 
 @Entity("payments")

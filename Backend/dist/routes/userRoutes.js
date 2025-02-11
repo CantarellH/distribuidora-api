@@ -7,11 +7,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const userController_1 = require("../controllers/userController");
 const authenticateToken_1 = require("../middlewares/authenticateToken");
-const checkPermission_1 = require("../middlewares/checkPermission");
 const router = express_1.default.Router();
 router.post("/login", userController_1.loginUser);
-router.get("/list", authenticateToken_1.authenticateToken, (0, checkPermission_1.checkPermission)("view_users"), userController_1.getUsers);
-router.put("/update/:id", authenticateToken_1.authenticateToken, (0, checkPermission_1.checkPermission)("update_user"), userController_1.updateUser);
-router.post("/create", authenticateToken_1.authenticateToken, (0, checkPermission_1.checkPermission)("create_user"), userController_1.createUser);
-router.delete("/:id", authenticateToken_1.authenticateToken, (0, checkPermission_1.checkPermission)("delete_user"), userController_1.deleteUser);
+router.get("/list", /*authenticateToken, checkPermission("view_users"),*/ userController_1.getUsers);
+router.put("/update/:id", 
+// authenticateToken,
+// checkPermission("update_user"),
+userController_1.updateUser);
+router.post("/create", 
+// authenticateToken,
+// checkPermission("create_user"),
+userController_1.createUser);
+// ✅ Asegurar que authenticateToken se use antes de `me`
+router.get("/me", authenticateToken_1.authenticateToken, 
+// checkPermission("check_user"),
+userController_1.me);
+router.delete("/:id", 
+// authenticateToken,
+// checkPermission("delete_user"),
+userController_1.deleteUser);
 exports.default = router;

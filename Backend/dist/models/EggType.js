@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EggType = void 0;
 const typeorm_1 = require("typeorm");
 const RemissionDetail_1 = require("./RemissionDetail");
+const EggTypeSupplier_1 = require("./EggTypeSupplier"); // Importar la relación
 let EggType = class EggType {
 };
 exports.EggType = EggType;
@@ -27,6 +28,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: "varchar", length: 255, nullable: true }),
     __metadata("design:type", String)
 ], EggType.prototype, "description", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => EggTypeSupplier_1.EggTypeSupplier, (eggTypeSupplier) => eggTypeSupplier.eggType),
+    __metadata("design:type", Array)
+], EggType.prototype, "eggTypeSuppliers", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, (remissionDetail) => remissionDetail.eggType),
     __metadata("design:type", Array)

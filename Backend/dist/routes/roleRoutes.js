@@ -4,11 +4,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const authenticateToken_1 = require("../middlewares/authenticateToken");
-const checkPermission_1 = require("../middlewares/checkPermission");
 const roleController_1 = require("../controllers/roleController");
 const router = express_1.default.Router();
-router.get("/list", authenticateToken_1.authenticateToken, (0, checkPermission_1.checkPermission)("view_roles"), roleController_1.getRoles);
+router.get("/list", 
+//authenticateToken,
+//checkPermission("view_roles"), 
+roleController_1.getRoles);
 router.post("/create", 
 // authenticateToken,
 // checkPermission("create_roles"),
@@ -17,6 +18,10 @@ router.post("/assign",
 // authenticateToken,
 // checkPermission("assign_permissions"),
 roleController_1.assignPermissions);
+router.get("/permissions/all", 
+// authenticateToken,
+// checkPermission("user_permissions"), 
+roleController_1.getAllPermissions);
 router.get("/permissions/:userId", 
 // authenticateToken,
 // checkPermission("user_permissions"),

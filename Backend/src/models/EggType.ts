@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 import { RemissionDetail } from "./RemissionDetail";
+import { EggTypeSupplier } from "./EggTypeSupplier"; // Importar la relación
 
 @Entity("egg_types")
 export class EggType {
@@ -18,6 +19,9 @@ export class EggType {
 
   @Column({ type: "varchar", length: 255, nullable: true })
   description?: string;
+
+  @OneToMany(() => EggTypeSupplier, (eggTypeSupplier) => eggTypeSupplier.eggType)
+  eggTypeSuppliers!: EggTypeSupplier[];
 
   @OneToMany(() => RemissionDetail, (remissionDetail) => remissionDetail.eggType)
   remissionDetails!: RemissionDetail[];

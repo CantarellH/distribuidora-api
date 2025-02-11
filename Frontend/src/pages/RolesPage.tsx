@@ -5,6 +5,7 @@ import {
   Typography,
   Table,
   TableBody,
+  TextField,
   TableCell,
   TableContainer,
   TableHead,
@@ -24,175 +25,211 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 
-interface Role {
+interface Permission {
   id: number;
   name: string;
-  modules: Module[];
+  description: string;
+  isActive: boolean;
 }
 
 interface Module {
   id: number;
   name: string;
-  permissions: Permission[];
+  permissions?: Permission[];
 }
 
-interface Permission {
+interface RoleModule {
+  id: number;
+  isActive: boolean;
+  module: Module;
+}
+
+interface Role {
   id: number;
   name: string;
-  description: string;
-  moduleId: number;
+  permissions: { id: number; isActive: boolean; permission: Permission }[];
+  module: RoleModule[];
 }
 
 const RolesPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
-  const [modules, setModules] = useState<Module[]>([]);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [open, setOpen] = useState(false);
   const [expandedModules, setExpandedModules] = useState<number[]>([]);
+  const [newRoleName, setNewRoleName] = useState<string>("");
+  const [openNewRoleModal, setOpenNewRoleModal] = useState(false);
+
 
   useEffect(() => {
     fetchRoles();
-    fetchModules();
   }, []);
 
-  // ✅ Obtener los roles y garantizar que siempre tengan módulos asignados
   const fetchRoles = async () => {
     try {
-      const response = await api.get("/roles/list");
-      const rolesData: Role[] = response.data.roles.map((role) => ({
-        ...role,
-        modules: role.modules ?? [], // ✅ Garantizar que modules existe
-      }));
-      setRoles(rolesData);
+      const response = await api.get<{ roles: Role[] }>("/roles/list");
+      setRoles(response.data.roles);
     } catch (error) {
       console.error("Error obteniendo roles:", error);
     }
   };
 
-  // ✅ Obtener la lista de módulos, asegurando que tengan permisos asignados
-  const fetchModules = async () => {
+  const handleCreateRole = async () => {
+    if (!newRoleName.trim()) {
+      alert("El nombre del rol no puede estar vacío.");
+      return;
+    }
+
     try {
-      const response = await api.get("/modules/list");
-      const modulesData: Module[] = response.data.map((mod) => ({
-        ...mod,
-        permissions: [], // Inicialmente vacío, los permisos se llenan después
-      }));
-
-      const permissionsResponse = await api.get("/roles/permissions/all");
-      const permissionsData: Permission[] = permissionsResponse.data;
-
-      // ✅ Asignar permisos a los módulos correspondientes
-      modulesData.forEach((mod) => {
-        mod.permissions = permissionsData.filter((perm) => perm.moduleId === mod.id);
-      });
-
-      setModules(modulesData);
+      await api.post("/roles/create", { name: newRoleName });
+      setNewRoleName("");
+      setOpenNewRoleModal(false);
+      fetchRoles();
     } catch (error) {
-      console.error("Error obteniendo módulos y permisos:", error);
+      console.error("Error creando el rol:", error);
     }
   };
 
-  // ✅ Seleccionar un rol y asegurarse de que tenga módulos
-  const handleSelectRole = (role: Role) => {
-    console.log("Rol seleccionado:", role);
 
-    setSelectedRole({
-      ...role,
-      modules: modules.map((mod) => ({
-        ...mod,
-        permissions: mod.permissions ?? [],
-      })), // ✅ Mostrar todos los módulos, incluso si no están asignados
-    });
-    setOpen(true);
+  const handleSelectRole = async (role: Role) => {
+    try {
+      const updatedRole = roles.find((r) => r.id === role.id) ?? role;
+  
+      const response = await api.get<Module[]>("/modules/list");
+  
+      if (!response.data || response.data.length === 0) {
+        console.error("Error: La API devolvió un array vacío.");
+        return;
+      }
+  
+      const allModules = response.data;
+  
+      const roleModulesMap = new Map(updatedRole.module?.map((rm) => [rm.module.id, rm.isActive]) ?? []);
+      const rolePermissionsMap = new Map(
+        updatedRole.permissions?.map((perm) => [perm.permission.id, perm.isActive]) ?? []
+      );
+  
+      const updatedModules: RoleModule[] = allModules.map((module) => ({
+        id: module.id,
+        isActive: roleModulesMap.get(module.id) ?? false,
+        module: {
+          ...module,
+          permissions: module.permissions?.map((perm) => ({
+            ...perm,
+            isActive: rolePermissionsMap.get(perm.id) ?? false,
+          })) ?? [],
+        },
+      }));
+  
+  
+      setSelectedRole({ ...updatedRole, module: updatedModules });
+      setOpen(true);
+    } catch (error) {
+      console.error("Error obteniendo módulos:", error);
+    }
   };
+  
 
-  // ✅ Alternar la asignación de módulos al rol
   const handleToggleModule = async (moduleId: number) => {
     if (!selectedRole) return;
-
-    const hasModule = selectedRole.modules.some((m) => m.id === moduleId);
-
-    setSelectedRole((prevRole) => {
-      if (!prevRole) return null;
-
-      const updatedModules = prevRole.modules.map((mod) =>
-        mod.id === moduleId
-          ? { ...mod, assigned: !hasModule } // ✅ Cambiar el estado del checkbox sin desaparecer el módulo
-          : mod
-      );
-
-      return { ...prevRole, modules: updatedModules };
-    });
-
+  
     try {
-      if (hasModule) {
-        await api.post("/modules/remove", {
-          roleId: selectedRole.id,
-          modules: [moduleId],
-        });
+      const module = selectedRole.module.find((m) => m.module.id === moduleId);
+      const isActiveNow = module?.isActive ?? false;
+  
+      if (isActiveNow) {
+        await api.post("/modules/remove", { roleId: selectedRole.id, modules: [moduleId] });
       } else {
-        await api.post("/modules/assign", {
-          roleId: selectedRole.id,
-          modules: [moduleId],
-        });
+        await api.post("/modules/assign", { roleId: selectedRole.id, modules: [moduleId] });
       }
+  
+      const updatedModules = selectedRole.module.map((mod) =>
+        mod.module.id === moduleId ? { ...mod, isActive: !mod.isActive } : mod
+      );
+  
+      setSelectedRole({ ...selectedRole, module: updatedModules });
+  
+      setRoles((prevRoles) =>
+        prevRoles.map((role) =>
+          role.id === selectedRole.id ? { ...role, module: updatedModules } : role
+        )
+      );
+  
     } catch (error) {
       console.error("Error actualizando módulos:", error);
     }
   };
 
-  // ✅ Alternar la asignación de permisos dentro de un módulo
   const handleTogglePermission = async (moduleId: number, permissionId: number) => {
     if (!selectedRole) return;
-
-    setSelectedRole((prevRole) => {
-      if (!prevRole) return null;
-
-      const updatedModules = prevRole.modules.map((module) => {
-        if (module.id !== moduleId) return module;
-
-        const hasPermission = module.permissions.some((p) => p.id === permissionId);
-
-        let updatedPermissions;
-        if (hasPermission) {
-          updatedPermissions = module.permissions.filter((p) => p.id !== permissionId);
-        } else {
-          const permissionToAdd = modules
-            .find((m) => m.id === moduleId)
-            ?.permissions.find((p) => p.id === permissionId);
-          if (!permissionToAdd) return module;
-          updatedPermissions = [...module.permissions, permissionToAdd];
-        }
-
-        return { ...module, permissions: updatedPermissions };
-      });
-
-      return { ...prevRole, modules: updatedModules };
-    });
-
+  
     try {
-      await api.post("/roles/assign", {
-        roleId: selectedRole.id,
-        permissions: [permissionId],
+      const module = selectedRole.module.find((m) => m.module.id === moduleId);
+      const permission = module?.module.permissions?.find((p) => p.id === permissionId);
+      const isActiveNow = permission?.isActive ?? false;
+  
+      if (isActiveNow) {
+        await api.post("/roles/remove", { roleId: selectedRole.id, permissions: [permissionId] });
+      } else {
+        await api.post("/roles/assign", { roleId: selectedRole.id, permissions: [permissionId] });
+      }
+  
+      const updatedModules = selectedRole.module.map((mod) => {
+        if (mod.module.id !== moduleId) return mod;
+  
+        const updatedPermissions = mod.module.permissions?.map((perm) =>
+          perm.id === permissionId ? { ...perm, isActive: !perm.isActive } : perm
+        ) ?? [];
+  
+        return { ...mod, module: { ...mod.module, permissions: updatedPermissions } };
       });
+  
+      setSelectedRole({ ...selectedRole, module: updatedModules });
+  
+      setRoles((prevRoles) =>
+        prevRoles.map((role) =>
+          role.id === selectedRole.id ? { ...role, module: updatedModules } : role
+        )
+      );
+  
+      
     } catch (error) {
       console.error("Error actualizando permisos:", error);
     }
   };
 
-  // ✅ Expandir módulos para mostrar sus permisos
   const toggleModuleExpansion = (moduleId: number) => {
-    setExpandedModules((prevExpanded) =>
-      prevExpanded.includes(moduleId)
-        ? prevExpanded.filter((id) => id !== moduleId) // Cierra módulo
-        : [...prevExpanded, moduleId] // Abre módulo
+    setExpandedModules(
+      (prevExpanded) =>
+        prevExpanded.includes(moduleId)
+          ? prevExpanded.filter((id) => id !== moduleId)
+          : [...prevExpanded, moduleId]
     );
   };
+
+
+  useEffect(() => {
+    setRoles((prevRoles) =>
+      prevRoles.map((role) =>
+        role.id === selectedRole?.id ? { ...selectedRole } : role
+      )
+    );
+  }, [selectedRole]);
+  
 
   return (
     <DashboardLayout>
       <Typography variant="h4">Gestión de Roles, Módulos y Permisos</Typography>
-
+  
+      {}
+      <Button
+        variant="contained"
+        color="primary"
+        sx={{ mt: 2, mb: 2 }}
+        onClick={() => setOpenNewRoleModal(true)}
+      >
+        Crear Nuevo Rol
+      </Button>
+  
       <TableContainer component={Paper} sx={{ mt: 2 }}>
         <Table>
           <TableHead>
@@ -208,7 +245,10 @@ const RolesPage: React.FC = () => {
                 <TableCell>{role.id}</TableCell>
                 <TableCell>{role.name}</TableCell>
                 <TableCell>
-                  <Button variant="contained" onClick={() => handleSelectRole(role)}>
+                  <Button
+                    variant="contained"
+                    onClick={() => handleSelectRole(role)}
+                  >
                     Administrar Módulos & Permisos
                   </Button>
                 </TableCell>
@@ -217,31 +257,75 @@ const RolesPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="md">
+  
+      {}
+      <Dialog open={openNewRoleModal} onClose={() => setOpenNewRoleModal(false)}>
+        <DialogTitle>Crear Nuevo Rol</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Nombre del Rol"
+            fullWidth
+            variant="outlined"
+            value={newRoleName}
+            onChange={(e) => setNewRoleName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenNewRoleModal(false)} color="secondary">
+            Cancelar
+          </Button>
+          <Button onClick={handleCreateRole} color="primary" variant="contained">
+            Crear Rol
+          </Button>
+        </DialogActions>
+      </Dialog>
+  
+      {}
+      <Dialog
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          fetchRoles();
+        }}
+        fullWidth
+        maxWidth="md"
+      >
         <DialogTitle>Administrar Módulos & Permisos</DialogTitle>
         <DialogContent>
           <List>
-            {selectedRole?.modules?.map((module) => (
-              <div key={module.id}>
-                <ListItem component="div">
+            {selectedRole?.module?.map((module) => (
+              <div key={module.module.id}>
+                <ListItem>
                   <Checkbox
-                    checked={selectedRole.modules.some((m) => m.id === module.id)}
-                    onChange={() => handleToggleModule(module.id)}
+                    checked={Boolean(module.isActive)}
+                    onChange={() => handleToggleModule(module.module.id)}
                   />
-                  <ListItemText primary={module.name} />
-                  <Button onClick={() => toggleModuleExpansion(module.id)}>
-                    {expandedModules.includes(module.id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  <ListItemText primary={module.module.name} />
+                  <Button onClick={() => toggleModuleExpansion(module.module.id)}>
+                    {expandedModules.includes(module.module.id) ? (
+                      <ExpandLessIcon />
+                    ) : (
+                      <ExpandMoreIcon />
+                    )}
                   </Button>
                 </ListItem>
-
-                <Collapse in={expandedModules.includes(module.id)} timeout="auto" unmountOnExit>
+  
+                <Collapse
+                  in={expandedModules.includes(module.module.id)}
+                  timeout="auto"
+                  unmountOnExit
+                >
                   <List sx={{ pl: 4 }}>
-                    {module.permissions.map((permission) => (
-                      <ListItem key={permission.id} component="div">
+                    {module.module.permissions?.map((permission) => (
+                      <ListItem key={permission.id}>
                         <Checkbox
-                          checked={module.permissions.some((p) => p.id === permission.id)}
-                          onChange={() => handleTogglePermission(module.id, permission.id)}
+                          checked={Boolean(permission.isActive)}
+                          onChange={() =>
+                            handleTogglePermission(
+                              module.module.id,
+                              permission.id
+                            )
+                          }
                         />
                         <ListItemText primary={permission.description} />
                       </ListItem>

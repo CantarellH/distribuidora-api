@@ -14,7 +14,7 @@ export const getAllModules = async (
 ): Promise<void> => {
   try {
     const moduleRepo = AppDataSource.getRepository(Module);
-    const modules = await moduleRepo.find();
+    const modules = await moduleRepo.find({relations: ["roleModules", "permissions"]});
     res.status(200).json(modules);
   } catch (error) {
     console.error(error);

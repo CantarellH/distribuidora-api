@@ -14,6 +14,7 @@ import { BoxWeight } from '../models/BoxWeight';
 import { RolePermission } from '../models/RolePermission';
 import { Module } from '../models/Modules';
 import { RoleModule } from '../models/RoleModule';
+import { EggTypeSupplier } from '../models/EggTypeSupplier';
 import { Payment } from '../models/Payment';
 import { PaymentDetail } from '../models/PaymentDetail';
 
@@ -29,6 +30,7 @@ export const AppDataSource = new DataSource({
   logging: true,
   entities: [
     EggType,
+    EggTypeSupplier,
     Module,
     User,
     RoleModule,

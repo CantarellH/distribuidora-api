@@ -4,10 +4,12 @@ import {
   PrimaryGeneratedColumn,
   Column,
   OneToMany,
-  ManyToOne
+  ManyToOne,
+  ManyToMany
 } from "typeorm";
 import { RolePermission } from "./RolePermission";
 import { Module } from "./Modules";
+import { Role } from "./Role";
 
 @Entity("permissions")
 export class Permission {
@@ -26,4 +28,7 @@ module?: Module;
   // Relación con la tabla pivote "role_permissions"
   @OneToMany(() => RolePermission, (rolePermission) => rolePermission.permission)
   rolePermissions?: RolePermission[];
+
+  @ManyToMany(() => Role, (role) => role.permissions)
+  roles!: Role[];
 }

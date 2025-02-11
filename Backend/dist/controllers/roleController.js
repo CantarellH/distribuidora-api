@@ -9,24 +9,47 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserPermissions = exports.removePermissions = exports.assignPermissions = exports.createRole = exports.handleValidationErrors = exports.getRoles = void 0;
+exports.getAllPermissions = exports.getUserPermissions = exports.removePermissions = exports.assignPermissions = exports.createRole = exports.handleValidationErrors = exports.getRoles = void 0;
 const data_source_1 = require("../config/data-source");
 const Role_1 = require("../models/Role");
 const User_1 = require("../models/User");
 const Permission_1 = require("../models/Permission");
+const RolePermission_1 = require("../models/RolePermission"); // <-- Importante
 const express_validator_1 = require("express-validator");
+// 1) Listar todos los roles y, de paso, obtener todos los permisos
+//    (Usamos la relación con RolePermission)
 const getRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const roleRepository = data_source_1.AppDataSource.getRepository(Role_1.Role);
-        const roles = yield roleRepository.find();
-        res.status(200).json(roles); // Enviar respuesta y detener
+        // Incluir la relación con RolePermission y Permission
+        const roles = yield roleRepository.find({
+            relations: ["rolePermissions", "rolePermissions.permission", "roleModules", "roleModules.module"],
+        });
+        // Mapear cada rol para obtener únicamente los permisos activos
+        const rolesMapped = roles.map((role) => {
+            var _a, _b;
+            const activePermissions = (_b = (_a = role.rolePermissions) === null || _a === void 0 ? void 0 : _a.filter((rp) => rp.isActive).map((rp) => rp.permission)) !== null && _b !== void 0 ? _b : [];
+            return {
+                id: role.id,
+                name: role.name,
+                description: role.description,
+                module: role.roleModules,
+                permissions: role.rolePermissions,
+            };
+        });
+        // Obtener la lista de todos los permisos
+        // Devolver roles (con permisos activos) y la lista completa de permisos
+        res.status(200).json({
+            roles: rolesMapped,
+        });
     }
     catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Error al obtener roles" }); // Asegúrate de que se detiene aquí
+        res.status(500).json({ error: "Error al obtener roles y permisos" });
     }
 });
 exports.getRoles = getRoles;
+// 2) Middleware genérico de validación (sin cambios)
 const handleValidationErrors = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
@@ -36,6 +59,7 @@ const handleValidationErrors = (req, res, next) => {
     next();
 };
 exports.handleValidationErrors = handleValidationErrors;
+// 3) Crear un nuevo rol (sin cambios)
 const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name, description } = req.body;
@@ -49,8 +73,9 @@ const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.createRole = createRole;
+// 4) Asignar permisos a un rol: aquí *activamos* (o creamos) el registro
+//    en la tabla 'role_permissions' con isActive = true
 const assignPermissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
     try {
         const { roleId, permissions } = req.body;
         // Validar datos de entrada
@@ -61,31 +86,40 @@ const assignPermissions = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return;
         }
         const roleRepository = data_source_1.AppDataSource.getRepository(Role_1.Role);
-        const permissionRepository = data_source_1.AppDataSource.getRepository(Permission_1.Permission);
-        // Buscar el rol con sus permisos existentes
-        const role = yield roleRepository.findOne({
-            where: { id: roleId },
-            relations: ["permissions"],
-        });
+        const rolePermissionRepository = data_source_1.AppDataSource.getRepository(RolePermission_1.RolePermission);
+        // Verificar si el rol existe
+        const role = yield roleRepository.findOneBy({ id: roleId });
         if (!role) {
             res.status(404).json({ error: "El rol especificado no existe." });
             return;
         }
-        // Validar que los permisos existan
-        const validPermissions = yield permissionRepository.findByIds(permissions);
-        if (validPermissions.length !== permissions.length) {
-            res.status(400).json({ error: "Algunos permisos no son válidos." });
-            return;
+        // Activar (o crear) la relación en 'role_permissions'
+        for (const permissionId of permissions) {
+            // Buscar si ya existe la fila en la tabla pivote
+            let rp = yield rolePermissionRepository.findOne({
+                where: {
+                    role: { id: roleId },
+                    permission: { id: permissionId },
+                },
+            });
+            if (rp) {
+                // Si ya existe, simplemente activamos isActive
+                rp.isActive = true;
+                yield rolePermissionRepository.save(rp);
+            }
+            else {
+                // Si no existe, la creamos con isActive = true
+                rp = rolePermissionRepository.create({
+                    role: { id: roleId },
+                    permission: { id: permissionId },
+                    isActive: true,
+                });
+                yield rolePermissionRepository.save(rp);
+            }
         }
-        // Asegurarte de que permissions no sea undefined
-        role.permissions = (_a = role.permissions) !== null && _a !== void 0 ? _a : [];
-        // Combinar los permisos existentes con los nuevos
-        role.permissions = [...role.permissions, ...validPermissions];
-        // Guardar los cambios en la base de datos
-        yield roleRepository.save(role);
         res
             .status(200)
-            .json({ message: "Permisos asignados correctamente.", role });
+            .json({ message: "Permisos asignados (activados) correctamente." });
     }
     catch (error) {
         console.error(error);
@@ -93,8 +127,9 @@ const assignPermissions = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.assignPermissions = assignPermissions;
+// 5) Remover (o desactivar) permisos de un rol:
+//    aquí pondremos isActive = false, en lugar de eliminar la fila
 const removePermissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
     try {
         const { roleId, permissions } = req.body;
         if (!roleId ||
@@ -108,25 +143,32 @@ const removePermissions = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return;
         }
         const roleRepository = data_source_1.AppDataSource.getRepository(Role_1.Role);
-        const role = yield roleRepository.findOne({
-            where: { id: roleId },
-            relations: ["permissions"],
-        });
+        const rolePermissionRepository = data_source_1.AppDataSource.getRepository(RolePermission_1.RolePermission);
+        // Verificar si el rol existe
+        const role = yield roleRepository.findOneBy({ id: roleId });
         if (!role) {
             res.status(404).json({ error: "El rol especificado no existe." });
             return;
         }
-        // Asegura que permissions no sea undefined
-        role.permissions = (_a = role.permissions) !== null && _a !== void 0 ? _a : [];
-        // Verificar que todos los permisos a remover realmente existen y están asignados al rol
-        const existingPermissionIds = new Set(role.permissions.map((p) => p.id));
-        const validPermissionsToRemove = permissions.filter((id) => existingPermissionIds.has(id));
-        // Filtrar los permisos que no están en la lista para remover
-        role.permissions = role.permissions.filter((permission) => !validPermissionsToRemove.includes(permission.id));
-        yield roleRepository.save(role);
+        // Desactivar la relación en 'role_permissions'
+        for (const permissionId of permissions) {
+            // Buscar si ya existe la fila en la tabla pivote
+            const rp = yield rolePermissionRepository.findOne({
+                where: {
+                    role: { id: roleId },
+                    permission: { id: permissionId },
+                },
+            });
+            // Si existe, se desactiva (isActive = false). 
+            // O podrías directamente eliminar la fila con .remove(rp).
+            if (rp) {
+                rp.isActive = false;
+                yield rolePermissionRepository.save(rp);
+            }
+        }
         res
             .status(200)
-            .json({ message: "Permisos eliminados correctamente.", role });
+            .json({ message: "Permisos desactivados correctamente." });
     }
     catch (error) {
         console.error(error);
@@ -134,7 +176,10 @@ const removePermissions = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.removePermissions = removePermissions;
+// 6) Obtener permisos de un usuario según su rol. Como 'role.permissions' 
+//    ya no existe, cargamos 'role.rolePermissions' y filtramos isActive.
 const getUserPermissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     try {
         const { userId } = req.params; // userId es un string aquí
         const userIdNumber = parseInt(userId, 10);
@@ -143,16 +188,23 @@ const getUserPermissions = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return;
         }
         const userRepository = data_source_1.AppDataSource.getRepository(User_1.User);
+        // Cargamos al usuario con su rol, y al rol con las rolePermissions
+        // (y dentro de ellas, la permission asociada)
         const user = yield userRepository.findOne({
             where: { id: userIdNumber },
-            relations: ["role", "role.permissions"],
+            relations: [
+                "role",
+                "role.rolePermissions",
+                "role.rolePermissions.permission",
+            ],
         });
         if (!user || !user.role) {
             res.status(404).json({ error: "Usuario o rol no encontrado." });
             return;
         }
-        const permissions = user.role.permissions;
-        res.status(200).json({ permissions });
+        // Filtrar los que estén isActive = true
+        const activePermissions = (_b = (_a = user.role.rolePermissions) === null || _a === void 0 ? void 0 : _a.filter((rp) => rp.isActive).map((rp) => rp.permission)) !== null && _b !== void 0 ? _b : [];
+        res.status(200).json({ permissions: activePermissions });
     }
     catch (error) {
         console.error(error);
@@ -160,3 +212,16 @@ const getUserPermissions = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.getUserPermissions = getUserPermissions;
+// 7) Listar todos los permisos (sin cambios, opcional)
+const getAllPermissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const permissionRepository = data_source_1.AppDataSource.getRepository(Permission_1.Permission);
+        const allPermissions = yield permissionRepository.find({ relations: ["module"], });
+        res.status(200).json(allPermissions);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener la lista de permisos" });
+    }
+});
+exports.getAllPermissions = getAllPermissions;

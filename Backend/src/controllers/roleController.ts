@@ -13,7 +13,7 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
     const roleRepository = AppDataSource.getRepository(Role);
     // Incluir la relación con RolePermission y Permission
     const roles = await roleRepository.find({
-      relations: ["rolePermissions", "rolePermissions.permission"],
+      relations: ["rolePermissions", "rolePermissions.permission","roleModules","roleModules.module"],
     });
 
     // Mapear cada rol para obtener únicamente los permisos activos
@@ -27,20 +27,18 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
         name: role.name,
         description: role.description,
         module: role.roleModules,
-        // Sólo los permisos activos
-        permissions: activePermissions,
+        
+        permissions: role.rolePermissions,
       };
     });
 
     // Obtener la lista de todos los permisos
-    const permissionRepository = AppDataSource.getRepository(Permission);
-    const allPermissions = await permissionRepository.find();
-
+    
+   
     // Devolver roles (con permisos activos) y la lista completa de permisos
     res.status(200).json({
       roles: rolesMapped,
-      allPermissions,
-    });
+        });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al obtener roles y permisos" });

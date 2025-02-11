@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Supplier = void 0;
 const typeorm_1 = require("typeorm");
 const RemissionDetail_1 = require("./RemissionDetail");
+const EggTypeSupplier_1 = require("./EggTypeSupplier"); // Importar la relación
 let Supplier = class Supplier {
 };
 exports.Supplier = Supplier;
@@ -20,14 +21,17 @@ __decorate([
     __metadata("design:type", Number)
 ], Supplier.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: "varchar", length: 100, nullable: true }) // Cambiado a nullable: true
-    ,
+    (0, typeorm_1.Column)({ type: "varchar", length: 100, nullable: true }),
     __metadata("design:type", String)
 ], Supplier.prototype, "name", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: "varchar", length: 255, nullable: true }),
     __metadata("design:type", String)
 ], Supplier.prototype, "contact_info", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => EggTypeSupplier_1.EggTypeSupplier, (eggTypeSupplier) => eggTypeSupplier.supplier),
+    __metadata("design:type", Array)
+], Supplier.prototype, "eggTypeSuppliers", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => RemissionDetail_1.RemissionDetail, (detail) => detail.supplier),
     __metadata("design:type", Array)

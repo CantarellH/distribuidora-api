@@ -2,6 +2,8 @@ import express from "express";
 import {
   getEggTypes,
   createEggType,
+  getSuppliersByEggType,
+  getEggTypesBySupplier,
   updateEggType,
   deleteEggType,
 } from "../controllers/EggTypeController";
@@ -21,6 +23,18 @@ router.post(
   // authenticateToken,
   // checkPermission("create_egg_types"),
   createEggType
+);
+router.get(
+  "/:eggTypeId/suppliers",
+  // authenticateToken,
+  // checkPermission("view_egg_types"),
+  getSuppliersByEggType
+);
+router.get(
+  "/:supplierId/types",
+  // authenticateToken,
+  // checkPermission("view_egg_types"),
+  getEggTypesBySupplier
 );
 router.put(
   "/:id",

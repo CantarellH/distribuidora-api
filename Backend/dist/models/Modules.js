@@ -9,39 +9,30 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Permission = void 0;
-// models/Permission.ts
+exports.Module = void 0;
+// models/Module.ts
 const typeorm_1 = require("typeorm");
-const RolePermission_1 = require("./RolePermission");
-const Modules_1 = require("./Modules");
-const Role_1 = require("./Role");
-let Permission = class Permission {
+const Permission_1 = require("./Permission");
+const RoleModule_1 = require("./RoleModule");
+let Module = class Module {
 };
-exports.Permission = Permission;
+exports.Module = Module;
 __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)(),
     __metadata("design:type", Number)
-], Permission.prototype, "id", void 0);
+], Module.prototype, "id", void 0);
 __decorate([
     (0, typeorm_1.Column)({ unique: true, default: "default_name" }),
     __metadata("design:type", String)
-], Permission.prototype, "name", void 0);
+], Module.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Modules_1.Module, (module) => module.permissions, { nullable: true }),
-    __metadata("design:type", Modules_1.Module)
-], Permission.prototype, "module", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], Permission.prototype, "description", void 0);
-__decorate([
-    (0, typeorm_1.OneToMany)(() => RolePermission_1.RolePermission, (rolePermission) => rolePermission.permission),
+    (0, typeorm_1.OneToMany)(() => Permission_1.Permission, (permission) => permission.module),
     __metadata("design:type", Array)
-], Permission.prototype, "rolePermissions", void 0);
+], Module.prototype, "permissions", void 0);
 __decorate([
-    (0, typeorm_1.ManyToMany)(() => Role_1.Role, (role) => role.permissions),
+    (0, typeorm_1.OneToMany)(() => RoleModule_1.RoleModule, (roleModule) => roleModule.module),
     __metadata("design:type", Array)
-], Permission.prototype, "roles", void 0);
-exports.Permission = Permission = __decorate([
-    (0, typeorm_1.Entity)("permissions")
-], Permission);
+], Module.prototype, "roleModules", void 0);
+exports.Module = Module = __decorate([
+    (0, typeorm_1.Entity)("modules")
+], Module);

@@ -19,7 +19,7 @@ dotenv_1.default.config();
 const PORT = process.env.PORT || 3000;
 (() => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        yield data_source_1.AppDataSource.initialize();
+        yield data_source_1.AppDataSource.initialize(); // Inicializar conexión con la base de datos
         app_1.default.listen(PORT, () => {
             console.log(`Server running at http://localhost:${PORT}`);
         });

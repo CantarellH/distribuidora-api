@@ -14,6 +14,10 @@ const RemissionDetail_1 = require("../models/RemissionDetail");
 const Remission_1 = require("../models/Remission");
 const Client_1 = require("../models/Client");
 const BoxWeight_1 = require("../models/BoxWeight");
+const RolePermission_1 = require("../models/RolePermission");
+const Modules_1 = require("../models/Modules");
+const RoleModule_1 = require("../models/RoleModule");
+const EggTypeSupplier_1 = require("../models/EggTypeSupplier");
 const Payment_1 = require("../models/Payment");
 const PaymentDetail_1 = require("../models/PaymentDetail");
 exports.AppDataSource = new typeorm_1.DataSource({
@@ -27,7 +31,10 @@ exports.AppDataSource = new typeorm_1.DataSource({
     logging: true,
     entities: [
         EggType_1.EggType,
+        EggTypeSupplier_1.EggTypeSupplier,
+        Modules_1.Module,
         User_1.User,
+        RoleModule_1.RoleModule,
         Role_1.Role,
         Permission_1.Permission,
         Supplier_1.Supplier,
@@ -39,5 +46,6 @@ exports.AppDataSource = new typeorm_1.DataSource({
         BoxWeight_1.BoxWeight,
         Payment_1.Payment,
         PaymentDetail_1.PaymentDetail,
+        RolePermission_1.RolePermission,
     ],
 });

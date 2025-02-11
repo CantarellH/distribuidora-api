@@ -8,11 +8,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.refreshToken = exports.deleteUser = exports.updateUser = exports.getUsers = exports.loginUser = exports.handleValidationErrors = exports.validateCreateUser = exports.createUser = void 0;
+exports.me = exports.refreshToken = exports.deleteUser = exports.updateUser = exports.getUsers = exports.loginUser = exports.handleValidationErrors = exports.validateCreateUser = exports.createUser = void 0;
 const data_source_1 = require("../config/data-source");
 const Role_1 = require("../models/Role");
 const User_1 = require("../models/User");
@@ -90,20 +101,23 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const userRepository = data_source_1.AppDataSource.getRepository(User_1.User);
         const user = yield userRepository.findOne({
             where: { username },
-            relations: ["role"], // Asegúrate de incluir la relación con el rol
+            relations: ["role"], // ✅ Asegurar que incluimos el rol
         });
         if (!user) {
             res.status(400).json({ error: "Credenciales inválidas" });
             return;
         }
-        // Validar contraseña (código omitido para simplicidad)
-        // Generar el token JWT incluyendo el rol
-        const token = jsonwebtoken_1.default.sign({ id: user.id, role: user.role.name }, // Incluir el nombre del rol
-        process.env.JWT_SECRET || "tu_secreto", { expiresIn: "5m" });
+        const passwordMatch = yield bcrypt_1.default.compare(password, user.password);
+        if (!passwordMatch) {
+            res.status(400).json({ error: "Credenciales inválidas" });
+            return;
+        }
+        // ✅ Incluir el ID, username, rol y otros datos necesarios en el token
+        const token = jsonwebtoken_1.default.sign({ id: user.id, username: user.username, role: user.role.name }, process.env.JWT_SECRET || "tu_secreto", { expiresIn: "5m" });
         res.status(200).json({ token });
     }
     catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: "Error interno del servidor" });
     }
 });
 exports.loginUser = loginUser;
@@ -111,9 +125,14 @@ const getUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userRepository = data_source_1.AppDataSource.getRepository(User_1.User);
         const users = yield userRepository.find({
-            select: ["id", "username", "role", "status", "created_at", "updated_at"], // Excluir 'password'
+            relations: ['role'], // <--- Aquí cargamos la relación del rol
         });
-        res.status(200).json(users);
+        // Excluir la contraseña en la respuesta (si tu modelo la incluye)
+        const usersWithoutPassword = users.map((_a) => {
+            var { password } = _a, rest = __rest(_a, ["password"]);
+            return rest;
+        });
+        res.status(200).json(usersWithoutPassword);
     }
     catch (error) {
         res.status(500).json({ error: error.message });
@@ -203,3 +222,15 @@ const refreshToken = (req, res) => {
     });
 };
 exports.refreshToken = refreshToken;
+const me = (req, res) => {
+    if (!req.user) {
+        res.status(404).json({ error: "Usuario no encontrado" });
+        return;
+    }
+    res.json({
+        id: req.user.id,
+        name: req.user.username,
+        role: req.user.role,
+    });
+};
+exports.me = me;

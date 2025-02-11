@@ -68,11 +68,11 @@ const UsersPage: React.FC = () => {
   const fetchRoles = async () => {
     try {
       const response = await api.get("/roles/list");
-      console.log("Respuesta de la API:", response.data); // ✅ Verificar estructura
-      setRoles(response.data.roles || []); // ✅ Acceder a roles dentro del objeto
+    
+      setRoles(response.data.roles || []);
     } catch (error) {
       console.error("Error obteniendo roles:", error);
-      setRoles([]); // ✅ En caso de error, aseguramos que roles sea un array vacío
+      setRoles([]);
     }
   };
   
@@ -122,7 +122,7 @@ const UsersPage: React.FC = () => {
         Agregar Usuario
       </Button>
 
-      {/* Modal para agregar usuario */}
+      {}
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Crear Nuevo Usuario</DialogTitle>
         <DialogContent>
@@ -171,7 +171,7 @@ const UsersPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Modal para editar usuario */}
+      {}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)}>
         <DialogTitle>Editar Usuario</DialogTitle>
         <DialogContent>
@@ -226,7 +226,7 @@ const UsersPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Tabla de usuarios */}
+      {}
       <TableContainer component={Paper} sx={{ mt: 2 }}>
         <Table>
           <TableHead>

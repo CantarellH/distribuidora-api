@@ -10,8 +10,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Role = void 0;
+// models/Role.ts
 const typeorm_1 = require("typeorm");
 const User_1 = require("./User");
+const RolePermission_1 = require("./RolePermission");
+const RoleModule_1 = require("./RoleModule");
 const Permission_1 = require("./Permission");
 let Role = class Role {
 };
@@ -34,13 +37,17 @@ __decorate([
 ], Role.prototype, "users", void 0);
 __decorate([
     (0, typeorm_1.ManyToMany)(() => Permission_1.Permission, (permission) => permission.roles),
-    (0, typeorm_1.JoinTable)({
-        name: "role_permissions",
-        joinColumn: { name: "role_id", referencedColumnName: "id" },
-        inverseJoinColumn: { name: "permission_id", referencedColumnName: "id" },
-    }),
+    (0, typeorm_1.JoinTable)(),
     __metadata("design:type", Array)
 ], Role.prototype, "permissions", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => RolePermission_1.RolePermission, (rolePermission) => rolePermission.role),
+    __metadata("design:type", Array)
+], Role.prototype, "rolePermissions", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => RoleModule_1.RoleModule, (roleModule) => roleModule.role),
+    __metadata("design:type", Array)
+], Role.prototype, "roleModules", void 0);
 exports.Role = Role = __decorate([
     (0, typeorm_1.Entity)("roles")
 ], Role);

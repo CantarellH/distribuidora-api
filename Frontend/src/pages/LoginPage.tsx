@@ -9,20 +9,20 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const auth = useContext(AuthContext);
-  const navigate = useNavigate(); // ✅ Redirección después de login
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(""); // Limpiar errores previos
+    setError("");
 
     try {
       const response = await api.post("/users/login", { username, password });
       const { token } = response.data;
 
-      auth?.login(token); // ✅ Guardar el token y actualizar el estado
+      auth?.login(token);
 
-      navigate("/dashboard"); // ✅ Redirigir al Dashboard
-    } catch (err) {
+      navigate("/dashboard");
+    } catch (error) {
       setError("Credenciales incorrectas. Inténtalo de nuevo.");
     }
   };

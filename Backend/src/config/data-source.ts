@@ -17,16 +17,20 @@ import { RoleModule } from '../models/RoleModule';
 import { EggTypeSupplier } from '../models/EggTypeSupplier';
 import { Payment } from '../models/Payment';
 import { PaymentDetail } from '../models/PaymentDetail';
+import { join } from "path";
+import dotenv from "dotenv";
+
+dotenv.config({ path: join(__dirname, "./../../../Frontend/.env") }); 
 
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
-  username: process.env.DB_USER || 'Admin',
-  password: process.env.DB_PASS || 'C4nt4rell',
-  database: process.env.DB_NAME || 'Comercializadora_Carreta',
-  synchronize: false,
+  username: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASS || 'password',
+  database: process.env.DB_NAME || 'db',
+  synchronize: true,
   logging: true,
   entities: [
     EggType,

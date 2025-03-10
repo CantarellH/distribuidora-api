@@ -118,7 +118,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     // ✅ Incluir el ID, username, rol y otros datos necesarios en el token
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role.name },
-      process.env.JWT_SECRET || "tu_secreto",
+      process.env.JWT_SECRET || "t",
       { expiresIn: "5m" }
     );
 

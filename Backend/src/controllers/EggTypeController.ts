@@ -21,6 +21,7 @@ export const getEggTypes = async (
   }
 };
 
+
 // Crear un tipo de huevo con opción de vincularlo a un proveedor
 export const createEggType = async (
   req: Request,

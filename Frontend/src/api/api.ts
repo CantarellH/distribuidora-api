@@ -56,5 +56,25 @@ export const getEggTypesBySupplier = async (supplierId: number) => {
   return response.data;
 };
 
+export const getsuppliers = async () => {
+  const response = await api.get("/suppliers");
+  return response.data;
+};
 
+export const createSuppliers = async (data: { name: string; phone_number?: string; email?: string, address?: address  }) => {
+  const response = await api.post("/suppliers", data);
+  return response.data;
+};
+
+export const updateSuppliers = async (
+  id: number,
+  data: { name: string; description?: string; supplierId?: number }
+) => {
+  const response = await api.put(`/types/${id}`, data);
+  return response.data;
+};
+
+export const deleteSuppliers = async (id: number) => {
+  await api.delete(`/types/${id}`);
+};
 export default api;

@@ -18,7 +18,8 @@ import HomeIcon from "@mui/icons-material/Home";
 import PeopleIcon from "@mui/icons-material/People";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import EggIcon from "@mui/icons-material/Egg"; // Icono para Tipos de Huevo
+import EggIcon from "@mui/icons-material/Egg";
+import HandShake from '@mui/icons-material/Handshake'; // Icono para Tipos de Huevo
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const auth = useContext(AuthContext);
@@ -109,6 +110,20 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 <EggIcon />
               </ListItemIcon>
               <ListItemText primary="Tipos de Huevo" />
+            </ListItemButton>
+          </ListItem>
+
+          {/* Nuevo enlace para Proveedores */}
+          <ListItem disablePadding>
+            <ListItemButton
+              component={Link}
+              to="/dashboard/Suppliers"
+              selected={location.pathname === "/dashboard/Suppliers"}
+            >
+              <ListItemIcon>
+                <HandShake />
+              </ListItemIcon>
+              <ListItemText primary="Proveedores" />
             </ListItemButton>
           </ListItem>
         </List>

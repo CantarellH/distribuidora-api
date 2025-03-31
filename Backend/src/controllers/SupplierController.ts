@@ -21,7 +21,7 @@ export const createSupplier = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { name, contact_info } = req.body;
+    const { name, phone_number, email, address } = req.body;
 
     if (!name) {
       res
@@ -29,6 +29,7 @@ export const createSupplier = async (
         .json({ error: "El nombre del proveedor es obligatorio." });
       return;
     }
+    
 
     const supplierRepository = AppDataSource.getRepository(Supplier);
     const existingSupplier = await supplierRepository.findOneBy({ name });
@@ -38,7 +39,7 @@ export const createSupplier = async (
       return;
     }
 
-    const newSupplier = supplierRepository.create({ name, contact_info });
+    const newSupplier = supplierRepository.create({ name, phone_number, email, address });
     const savedSupplier = await supplierRepository.save(newSupplier);
 
     res.status(201).json(savedSupplier);
@@ -54,7 +55,7 @@ export const updateSupplier = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, contact_info } = req.body;
+    const { name, email, address, phone_number } = req.body;
 
     const supplierRepository = AppDataSource.getRepository(Supplier);
 
@@ -82,7 +83,9 @@ export const updateSupplier = async (
 
     // Actualizar los campos del proveedor
     supplier.name = name || supplier.name;
-    supplier.contact_info = contact_info || supplier.contact_info;
+    supplier.phone_number = phone_number || supplier.phone_number;
+    supplier.email = email || supplier.email;
+    supplier.address = address || supplier.address;
 
     const updatedSupplier = await supplierRepository.save(supplier);
 

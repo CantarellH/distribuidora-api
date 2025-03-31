@@ -17,8 +17,14 @@ export class Supplier {
   @Column({ type: "varchar", length: 100, nullable: true })
   name?: string;
 
+  @Column({ type: "varchar", length: 15, nullable: true })
+  phone_number?: string;
+  
+  @Column({ type: "varchar", length: 100, nullable: true })
+  email?: string;
+
   @Column({ type: "varchar", length: 255, nullable: true })
-  contact_info?: string;
+  address?: string;
 
   @OneToMany(() => EggTypeSupplier, (eggTypeSupplier) => eggTypeSupplier.supplier)
   eggTypeSuppliers!: EggTypeSupplier[];

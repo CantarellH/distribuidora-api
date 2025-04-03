@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import React from "react";
 import DashboardLayout from "../components/DashboardLayout";
+import { useTheme, useMediaQuery } from "@mui/material";
 import {
   Typography,
   Table,
@@ -10,143 +12,212 @@ import {
   TableRow,
   Paper,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-  MenuItem,
-  Select,
-  InputLabel,
-  FormControl,
+  Box,
+  IconButton,
+  Collapse,
+  Chip,
+  Slide,
+  TextField
 } from "@mui/material";
 import {
   getsuppliers,
   createSuppliers,
   updateSuppliers,
-  deleteSuppliers,
-} from "../api/api"; // Importa las funciones necesarias
-import api from "../api/api";
+  deleteSupplier,
+  getEggTypesBySupplier,
+  createEggType,
+  updateEggType,
+  deleteEggType,
+} from "../api/api";
+import { KeyboardArrowDown, KeyboardArrowUp, Add, Edit, Close } from "@mui/icons-material";
 
-// Define la interfaz para los proveedores
-interface Supplier {
-  id: number;
-  name: string;
-  contact_info?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Define la interfaz para los tipos de huevo
-interface Suppliers {
+interface Product {
   id: number;
   name: string;
   description?: string;
+  supplierId: number;
   createdAt: string;
   updatedAt: string;
-  suppliersSuppliers?: { id: number; supplier: Supplier }[];
-  suppliers?: Supplier[]; // ✅ Agregamos el campo suppliers para que TypeScript lo reconozca
+}
+
+interface Supplier {
+  id: number;
+  name: string;
+  email?: string;
+  address?: string;
+  phone_number?: string;
+  createdAt: string;
+  updatedAt: string;
+  products?: Product[];
 }
 
 const SuppliersPage: React.FC = () => {
-  const [supplierss, setSupplierss] = useState<Suppliers[]>([]);
-  const [selectedSuppliers, setSelectedSuppliers] = useState<Suppliers | null>(null);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [form, setForm] = useState({
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [expandedRows, setExpandedRows] = useState<number[]>([]);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  // Estados para formularios en línea
+  const [activeForm, setActiveForm] = useState<'supplier' | 'product' | null>(null);
+  const [supplierForm, setSupplierForm] = useState({
+    name: "",
+    email: "",
+    address: "",
+    phone_number: "",
+  });
+  const [productForm, setProductForm] = useState({
     name: "",
     description: "",
-    supplierId: '',
   });
-  const [suppliers, setSuppliers] = useState<{ id: number; name: string }[]>([]);
 
   useEffect(() => {
-    fetchSupplierss();
-    fetchSuppliers(); // Cargar proveedores disponibles
+    fetchSuppliers();
   }, []);
-
-  const fetchSupplierss = async () => {
-    try {
-      const data: Suppliers[] = await getsuppliers(); // Ahora especificamos el tipo
-      const processedSupplierss = data.map((suppliers: Suppliers) => ({
-        ...suppliers,
-        suppliers: suppliers.suppliersSuppliers?.map((ets) => ets.supplier) || [],
-      }));
-      setSupplierss(processedSupplierss);
-    } catch (error) {
-      console.error("Error obteniendo los tipos de huevo:", error);
-    }
-  };
 
   const fetchSuppliers = async () => {
     try {
-      const response = await api.get<Supplier[]>("/suppliers"); // Definimos el tipo para la respuesta
-      setSuppliers(response.data);
+      const data: Supplier[] = await getsuppliers();
+      setSuppliers(data);
     } catch (error) {
       console.error("Error obteniendo proveedores:", error);
     }
   };
 
-  const handleOpenDialog = (suppliers?: Suppliers) => {
-    if (suppliers) {
-      setSelectedSuppliers(suppliers);
-      setForm({
-        name: suppliers.name,
-        description: suppliers.description || "",
-        supplierId: "",
+  const fetchProducts = async (supplierId: number) => {
+    try {
+      const products = await getEggTypesBySupplier(supplierId);
+      setSuppliers((prev) =>
+        prev.map((supplier) =>
+          supplier.id === supplierId ? { ...supplier, products } : supplier
+        )
+      );
+    } catch (error) {
+      console.error("Error obteniendo productos:", error);
+    }
+  };
+
+  const toggleRow = (supplierId: number) => {
+    if (expandedRows.includes(supplierId)) {
+      setExpandedRows(expandedRows.filter((id) => id !== supplierId));
+      setActiveForm(null);
+    } else {
+      fetchProducts(supplierId);
+      setExpandedRows([...expandedRows, supplierId]);
+    }
+  };
+
+  // Formulario de proveedor
+  const handleOpenSupplierForm = (supplier?: Supplier) => {
+    setActiveForm('supplier');
+    if (supplier) {
+      setSelectedSupplier(supplier);
+      setSupplierForm({
+        name: supplier.name,
+        email: supplier.email || "",
+        address: supplier.address || "",
+        phone_number: supplier.phone_number || "",
       });
     } else {
-      setSelectedSuppliers(null);
-      setForm({ name: "", description: "", supplierId: "" });
+      setSelectedSupplier(null);
+      setSupplierForm({ name: "", email: "", address: "", phone_number: "" });
     }
-    setOpenDialog(true);
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-  };
-
-  const handleSubmit = async () => {
+  const handleSupplierSubmit = async () => {
     try {
-      if (selectedSuppliers) {
-        // Editar tipo de huevo
-        const payload = {
-          name: form.name,
-          description: form.description,
-          supplierId: form.supplierId ? parseInt(form.supplierId, 10) : undefined,
-        };
-        await updateSuppliers(selectedSuppliers.id, payload);
+      const payload = {
+        name: supplierForm.name,
+        email: supplierForm.email,
+        address: supplierForm.address,
+        phone_number: supplierForm.phone_number,
+      };
+
+      if (selectedSupplier) {
+        await updateSuppliers(selectedSupplier.id, payload);
       } else {
-        // Crear tipo de huevo
-        const payload = {
-          name: form.name,
-          description: form.description,
-          supplierId: form.supplierId ? parseInt(form.supplierId, 10) : undefined,
-        };
         await createSuppliers(payload);
       }
-  
-      // 🔄 Volvemos a llamar a fetchSupplierss para recargar los datos de la tabla
-      await fetchSupplierss();
-  
-      // Cerramos el modal
-      handleCloseDialog();
+
+      await fetchSuppliers();
+      setActiveForm(null);
     } catch (error) {
-      console.error("Error al guardar:", error);
+      console.error("Error al guardar proveedor:", error);
     }
   };
-  
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("¿Seguro que quieres eliminar este tipo de huevo?")) {
+  // Formulario de producto
+  const handleOpenProductForm = (supplier: Supplier, product?: Product) => {
+    setSelectedSupplier(supplier);
+    setActiveForm('product');
+    if (product) {
+      setSelectedProduct(product);
+      setProductForm({
+        name: product.name,
+        description: product.description || "",
+      });
+    } else {
+      setSelectedProduct(null);
+      setProductForm({ name: "", description: "" });
+    }
+  };
+
+  const handleProductSubmit = async () => {
+    if (!selectedSupplier) return;
+
+    try {
+      const payload = {
+        name: productForm.name,
+        description: productForm.description,
+        supplierId: selectedSupplier.id,
+      };
+
+      if (selectedProduct) {
+        await updateEggType(selectedProduct.id, payload);
+      } else {
+        await createEggType(payload);
+      }
+
+      await fetchProducts(selectedSupplier.id);
+      setActiveForm(null);
+    } catch (error) {
+      console.error("Error al guardar producto:", error);
+    }
+  };
+
+  // Eliminar elementos
+  const handleDeleteSupplier = async (id: number) => {
+    if (window.confirm("¿Seguro que quieres eliminar este proveedor?")) {
       try {
-        await deleteSuppliers(id);
-
-        // ✅ Eliminamos solo el elemento afectado en la tabla sin recargar todo
-        setSupplierss((prevSupplierss) => prevSupplierss.filter((et) => et.id !== id));
+        await deleteSupplier(id);
+        setSuppliers((prev) => prev.filter((supplier) => supplier.id !== id));
       } catch (error) {
-        console.error("Error al eliminar:", error);
+        console.error("Error al eliminar proveedor:", error);
       }
     }
+  };
+
+  const handleDeleteProduct = async (productId: number, supplierId: number) => {
+    if (window.confirm("¿Seguro que quieres eliminar este producto?")) {
+      try {
+        await deleteEggType(productId);
+        await fetchProducts(supplierId);
+      } catch (error) {
+        console.error("Error al eliminar producto:", error);
+      }
+    }
+  };
+
+  // Estilos comunes
+  const formContainerStyles = {
+    p: 2,
+    mt: 2,
+    mb: 2,
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: 1,
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: theme.shadows[1]
   };
 
   return (
@@ -155,109 +226,230 @@ const SuppliersPage: React.FC = () => {
         Catálogo de Proveedores
       </Typography>
 
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={() => handleOpenDialog()}
-      >
-        Agregar Proveedor
-      </Button>
+      {/* Formulario de proveedor flotante */}
+      {activeForm === 'supplier' && (
+        <Slide direction="up" in={activeForm === 'supplier'} mountOnEnter unmountOnExit>
+          <Box sx={formContainerStyles}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6">
+                {selectedSupplier ? "Editar Proveedor" : "Agregar Proveedor"}
+              </Typography>
+              <IconButton onClick={() => setActiveForm(null)}>
+                <Close />
+              </IconButton>
+            </Box>
+            <TextField
+              label="Nombre"
+              fullWidth
+              value={supplierForm.name}
+              onChange={(e) => setSupplierForm({...supplierForm, name: e.target.value})}
+              margin="normal"
+              required
+            />
+            <TextField
+              label="Correo Electrónico"
+              fullWidth
+              value={supplierForm.email}
+              onChange={(e) => setSupplierForm({...supplierForm, email: e.target.value})}
+              margin="normal"
+            />
+            <TextField
+              label="Dirección"
+              fullWidth
+              value={supplierForm.address}
+              onChange={(e) => setSupplierForm({...supplierForm, address: e.target.value})}
+              margin="normal"
+            />
+            <TextField
+              label="Teléfono"
+              fullWidth
+              value={supplierForm.phone_number}
+              onChange={(e) => setSupplierForm({...supplierForm, phone_number: e.target.value})}
+              margin="normal"
+            />
+            <Box display="flex" justifyContent="flex-end" gap={2} mt={3}>
+              <Button variant="outlined" onClick={() => setActiveForm(null)}>
+                Cancelar
+              </Button>
+              <Button variant="contained" color="primary" onClick={handleSupplierSubmit}>
+                {selectedSupplier ? "Actualizar" : "Guardar"}
+              </Button>
+            </Box>
+          </Box>
+        </Slide>
+      )}
 
-      <TableContainer component={Paper} sx={{ mt: 2 }}>
+      {activeForm !== 'supplier' && (
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => handleOpenSupplierForm()}
+          sx={{ mb: 2 }}
+          startIcon={<Add />}
+        >
+          Agregar Proveedor
+        </Button>
+      )}
+
+      <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>ID</TableCell>
+              <TableCell />
               <TableCell>Nombre</TableCell>
-              <TableCell>Descripción</TableCell>
-              <TableCell>Proveedores</TableCell>
+              {!isMobile && <TableCell>Contacto</TableCell>}
               <TableCell>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {supplierss.map((suppliers) => (
-              <TableRow key={suppliers.id}>
-                <TableCell>{suppliers.id}</TableCell>
-                <TableCell>{suppliers.name}</TableCell>
-                <TableCell>
-                  {suppliers.description || "Sin descripción"}
-                </TableCell>
-                <TableCell>
-                  {suppliers.suppliers && suppliers.suppliers.length > 0
-                    ? suppliers.suppliers
-                        .map((supplier) => supplier.name)
-                        .join(", ")
-                    : "Sin proveedores"}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outlined"
-                    onClick={() => handleOpenDialog(suppliers)}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    onClick={() => handleDelete(suppliers.id)}
-                    sx={{ ml: 1 }}
-                  >
-                    Eliminar
-                  </Button>
-                </TableCell>
-              </TableRow>
+            {suppliers.map((supplier) => (
+              <React.Fragment key={`supplier-${supplier.id}`}>
+                {/* Fila del proveedor */}
+                <TableRow>
+                  <TableCell>
+                    <IconButton
+                      size="small"
+                      onClick={() => toggleRow(supplier.id)}
+                    >
+                      {expandedRows.includes(supplier.id) ? (
+                        <KeyboardArrowUp />
+                      ) : (
+                        <KeyboardArrowDown />
+                      )}
+                    </IconButton>
+                  </TableCell>
+                  <TableCell>{supplier.name}</TableCell>
+                  {!isMobile && (
+                    <TableCell>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        {supplier.email && <Chip label={supplier.email} size="small" />}
+                        {supplier.phone_number && <Chip label={supplier.phone_number} size="small" />}
+                      </Box>
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleOpenSupplierForm(supplier)}
+                      >
+                        {isMobile ? <Edit fontSize="small" /> : "Editar"}
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        onClick={() => handleDeleteSupplier(supplier.id)}
+                      >
+                        {isMobile ? <Close fontSize="small" /> : "Eliminar"}
+                      </Button>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+
+                {/* Fila expandible con productos */}
+                <TableRow>
+                  <TableCell style={{ padding: 0 }} colSpan={4}>
+                    <Collapse in={expandedRows.includes(supplier.id)} timeout="auto" unmountOnExit>
+                      <Box sx={{ p: 2 }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                          
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => handleOpenProductForm(supplier)}
+                            startIcon={<Add />}                          >
+                          </Button>
+                        </Box>
+
+                        {/* Formulario de producto en línea */}
+                        {activeForm === 'product' && expandedRows.includes(supplier.id) && (
+                          <Slide direction="up" in={activeForm === 'product'} mountOnEnter unmountOnExit>
+                            <Box sx={formContainerStyles}>
+                              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                <Typography variant="subtitle1">
+                                  {selectedProduct ? "Editar Producto" : "Nuevo Producto"}
+                                </Typography>
+                                <IconButton onClick={() => setActiveForm(null)} size="small">
+                                  <Close />
+                                </IconButton>
+                              </Box>
+                              <TextField
+                                label="Nombre"
+                                fullWidth
+                                value={productForm.name}
+                                onChange={(e) => setProductForm({...productForm, name: e.target.value})}
+                                margin="normal"
+                                required
+                              />
+                              <TextField
+                                label="Descripción"
+                                fullWidth
+                                multiline
+                                rows={3}
+                                value={productForm.description}
+                                onChange={(e) => setProductForm({...productForm, description: e.target.value})}
+                                margin="normal"
+                              />
+                              <Box display="flex" justifyContent="flex-end" gap={2} mt={2}>
+                                <Button variant="outlined" onClick={() => setActiveForm(null)}>
+                                  Cancelar
+                                </Button>
+                                <Button 
+                                  variant="contained" 
+                                  color="primary" 
+                                  onClick={handleProductSubmit}
+                                >
+                                  {selectedProduct ? "Actualizar" : "Guardar"}
+                                </Button>
+                              </Box>
+                            </Box>
+                          </Slide>
+                        )}
+
+                        {/* Lista de productos */}
+                        {supplier.products?.map((product) => (
+                          <Paper key={product.id} sx={{ p: 2, mb: 1 }}>
+                            <Box display="flex" justifyContent="space-between" alignItems="center">
+                              <Box>
+                                <Typography fontWeight="medium">{product.name}</Typography>
+                                {product.description && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    {product.description}
+                                  </Typography>
+                                )}
+                              </Box>
+                              <Box>
+                                <Button
+                                  size="small"
+                                  onClick={() => handleOpenProductForm(supplier, product)}
+                                  startIcon={<Edit />}
+                                  sx={{ mr: 1 }}
+                                >
+                                  {!isMobile && "Editar"}
+                                </Button>
+                                <Button
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleDeleteProduct(product.id, supplier.id)}
+                                  startIcon={<Close />}
+                                >
+                                  {!isMobile && "Eliminar"}
+                                </Button>
+                              </Box>
+                            </Box>
+                          </Paper>
+                        ))}
+                      </Box>
+                    </Collapse>
+                  </TableCell>
+                </TableRow>
+              </React.Fragment>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
-
-      {/* Modal para agregar/editar tipos de huevo */}
-      <Dialog open={openDialog} onClose={handleCloseDialog}>
-        <DialogTitle>
-          {selectedSuppliers ? "Editar Tipo de Huevo" : "Agregar Tipo de Huevo"}
-        </DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Nombre"
-            fullWidth
-            variant="outlined"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            sx={{ mt: 2 }}
-            required
-          />
-          <TextField
-            label="Descripción"
-            fullWidth
-            variant="outlined"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            sx={{ mt: 2 }}
-          />
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Proveedor</InputLabel>
-            <Select
-              value={form.supplierId}
-              onChange={(e) => setForm({ ...form, supplierId: e.target.value })}
-            >
-              <MenuItem value="">Sin proveedor</MenuItem>
-              {suppliers.map((supplier) => (
-                <MenuItem key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="secondary">
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit} color="primary" variant="contained">
-            {selectedSuppliers ? "Actualizar" : "Agregar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </DashboardLayout>
   );
 };

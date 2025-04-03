@@ -3,8 +3,8 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import UsersPage from "./pages/UsersPage";
 import RolesPage from "./pages/RolesPage";
+import ClientPage from "./pages/ClientPage";
 import RecordsPage from "./pages/RecordsPage";
-import EggTypePage from "./pages/EggTypePage"; // ✅ Importa la nueva página
 import SuppliersPage from "./pages/SuppliersPage"; // ✅ Importa la nueva página
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -29,7 +29,15 @@ function App() {
               <UsersPage />
             </ProtectedRoute>
           }
-        />
+        /> 
+        <Route
+        path="/dashboard/Clients"
+        element={
+          <ProtectedRoute>
+            <ClientPage />
+          </ProtectedRoute>
+        }
+      />
         <Route
           path="/dashboard/registros"
           element={
@@ -43,15 +51,6 @@ function App() {
           element={
             <ProtectedRoute>
               <RolesPage />
-            </ProtectedRoute>
-          }
-        />
-        {/* ✅ Nueva ruta para Tipos de Huevo */}
-        <Route
-          path="/dashboard/egg-types"
-          element={
-            <ProtectedRoute>
-              <EggTypePage />
             </ProtectedRoute>
           }
         />

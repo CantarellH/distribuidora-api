@@ -61,20 +61,57 @@ export const getsuppliers = async () => {
   return response.data;
 };
 
-export const createSuppliers = async (data: { name: string; phone_number?: string; email?: string, address?: address  }) => {
+export const createSuppliers = async (data: { name: string; phone_number?: string; email?: string, address?: string }) => {
   const response = await api.post("/suppliers", data);
   return response.data;
 };
 
 export const updateSuppliers = async (
   id: number,
-  data: { name: string; description?: string; supplierId?: number }
+  data: { name: string; phone_number?: string; email?: string, address?: string  }
 ) => {
-  const response = await api.put(`/types/${id}`, data);
+  const response = await api.put(`/suppliers/${id}`, data);
   return response.data;
 };
 
-export const deleteSuppliers = async (id: number) => {
-  await api.delete(`/types/${id}`);
+export const deleteSupplier = async (id: number) => {
+  await api.delete(`/suppliers/${id}`);
 };
+
+export const getClients = async () => {
+  const response = await api.get("/clients");
+  return response.data;
+};
+
+export const getClientById = async (id: number) => {
+  const response = await api.get(`/clients/${id}`);
+  return response.data;
+};
+
+// Crear un tipo de huevo con un proveedor asociado
+export const createClient = async (data: { name: string; description?: string; supplierId?: number }) => {
+  const response = await api.post("/clients", data);
+  return response.data;
+};
+
+// Actualizar un tipo de huevo
+export const updateClient = async (
+  id: number,
+  data: { name: string; description?: string; supplierId?: number }
+) => {
+  const response = await api.put(`/clients/${id}`, data);
+  return response.data;
+};
+
+
+// Eliminar un tipo de huevo
+export const deleteClient = async (id: number) => {
+  await api.delete(`/clients/${id}`);
+};
+
+
+
+
+
+
 export default api;

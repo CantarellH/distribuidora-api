@@ -51,9 +51,14 @@ export const getSuppliersByEggType = async (eggTypeId: number) => {
 };
 
 // Obtener los tipos de huevo de un proveedor
+// Endpoint más claro para tipos de huevo por proveedor
 export const getEggTypesBySupplier = async (supplierId: number) => {
-  const response = await api.get(`/types/${supplierId}/types`);
-  return response.data;
+  try {
+    const response = await api.get(`/types/${supplierId}/types`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
 };
 
 export const getsuppliers = async () => {
@@ -109,6 +114,69 @@ export const deleteClient = async (id: number) => {
   await api.delete(`/clients/${id}`);
 };
 
+// Mejor manejo de errores
+const handleApiError = (error: any) => {
+  if (error.response) {
+    throw new Error(error.response.data.message || 'Error en la solicitud');
+  } else {
+    throw new Error('Error de conexión con el servidor');
+  }
+};
+
+export const getSuppliers = async () => {
+  try {
+    const response = await api.get("/suppliers");
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+
+export const getInventoryEntries = async (params?: {
+  supplierId?: number;
+  eggTypeId?: number;
+  startDate?: string;
+  endDate?: string;
+}) => {
+  const response = await api.get("/inventory", { params });
+  return response.data;
+};
+
+export const getInventoryEntryById = async (id: number) => {
+  const response = await api.get(`/inventory/${id}`);
+  return response.data;
+};
+
+export const createInventoryEntry = async (data: {
+  supplierId: number;
+  details: {
+    eggTypeId: number;
+    boxCount: number;
+    weightTotal: number;
+  }[];
+}) => {
+  const response = await api.post("/inventory", data);
+  return response.data;
+};
+
+export const updateInventoryEntry = async (
+  id: number,
+  data: {
+    supplierId: number;
+    details: {
+      eggTypeId: number;
+      boxCount: number;
+      weightTotal: number;
+    }[];
+  }
+) => {
+  const response = await api.put(`/inventory/${id}`, data);
+  return response.data;
+};
+
+export const deleteInventoryEntry = async (id: number) => {
+  await api.delete(`/inventory/${id}`);
+};
 
 
 

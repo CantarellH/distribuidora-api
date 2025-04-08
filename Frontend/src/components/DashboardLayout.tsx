@@ -136,6 +136,19 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             <ListItemText primary="Proveedores" />
           </ListItemButton>
         </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton
+            component={Link}
+            to="/dashboard/Inventory"
+            selected={location.pathname === "/dashboard/Inventory"}
+            onClick={() => isMobile && setMobileOpen(false)}
+          >
+            <ListItemIcon>
+              <Handshake/>
+            </ListItemIcon>
+            <ListItemText primary="Inventario" />
+          </ListItemButton>
+        </ListItem>
       </List>
     </div>
   );

@@ -6,6 +6,7 @@ import RolesPage from "./pages/RolesPage";
 import ClientPage from "./pages/ClientPage";
 import RecordsPage from "./pages/RecordsPage";
 import SuppliersPage from "./pages/SuppliersPage"; // ✅ Importa la nueva página
+import InventoryPage from "./pages/InventoryPage"; // ✅ Importa la nueva página
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -60,6 +61,15 @@ function App() {
           element={
             <ProtectedRoute>
               <SuppliersPage/>
+            </ProtectedRoute>
+          }
+        />
+                {/* ✅ Nueva ruta para Tipos de Huevo */}
+                <Route
+          path="/dashboard/Inventory"
+          element={
+            <ProtectedRoute>
+              <InventoryPage/>
             </ProtectedRoute>
           }
         />

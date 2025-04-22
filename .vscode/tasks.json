@@ -1,0 +1,34 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Backend",
+            "type": "npm",
+            "script": "dev",
+            "path": "Backend/",
+            "isBackground": true,
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
+            "label": "Frontend",
+            "type": "npm",
+            "script": "dev",
+            "path": "Frontend/",
+            "isBackground": true,
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
+            "label": "Iniciar ambos proyectos",
+            "dependsOn": ["Backend", "Frontend"],
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        }
+    ]
+}

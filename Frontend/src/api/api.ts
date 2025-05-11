@@ -1,185 +1,241 @@
-import axios from 'axios';
+import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Interceptor para incluir el token en las peticiones
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-
-// Obtener todos los tipos de huevo con proveedores
-export const getEggTypes = async () => {
-  const response = await api.get("/types");
-  return response.data;
-};
-
-// Crear un tipo de huevo con un proveedor asociado
-export const createEggType = async (data: { name: string; description?: string; supplierId?: number }) => {
-  const response = await api.post("/types", data);
-  return response.data;
-};
-
-// Actualizar un tipo de huevo
-export const updateEggType = async (
-  id: number,
-  data: { name: string; description?: string; supplierId?: number }
-) => {
-  const response = await api.put(`/types/${id}`, data);
-  return response.data;
-};
-
-
-// Eliminar un tipo de huevo
-export const deleteEggType = async (id: number) => {
-  await api.delete(`/types/${id}`);
-};
-
-// Obtener los proveedores de un tipo de huevo
-export const getSuppliersByEggType = async (eggTypeId: number) => {
-  const response = await api.get(`/types/${eggTypeId}/suppliers`);
-  return response.data;
-};
-
-// Obtener los tipos de huevo de un proveedor
-// Endpoint más claro para tipos de huevo por proveedor
-export const getEggTypesBySupplier = async (supplierId: number) => {
-  try {
-    const response = await api.get(`/types/${supplierId}/types`);
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-  }
-};
-
-export const getsuppliers = async () => {
-  const response = await api.get("/suppliers");
-  return response.data;
-};
-
-export const createSuppliers = async (data: { name: string; phone_number?: string; email?: string, address?: string }) => {
-  const response = await api.post("/suppliers", data);
-  return response.data;
-};
-
-export const updateSuppliers = async (
-  id: number,
-  data: { name: string; phone_number?: string; email?: string, address?: string  }
-) => {
-  const response = await api.put(`/suppliers/${id}`, data);
-  return response.data;
-};
-
-export const deleteSupplier = async (id: number) => {
-  await api.delete(`/suppliers/${id}`);
-};
-
-export const getClients = async () => {
-  const response = await api.get("/clients");
-  return response.data;
-};
-
-export const getClientById = async (id: number) => {
-  const response = await api.get(`/clients/${id}`);
-  return response.data;
-};
-
-// Crear un tipo de huevo con un proveedor asociado
-export const createClient = async (data: { name: string; description?: string; supplierId?: number }) => {
-  const response = await api.post("/clients", data);
-  return response.data;
-};
-
-// Actualizar un tipo de huevo
-export const updateClient = async (
-  id: number,
-  data: { name: string; description?: string; supplierId?: number }
-) => {
-  const response = await api.put(`/clients/${id}`, data);
-  return response.data;
-};
-
-
-// Eliminar un tipo de huevo
-export const deleteClient = async (id: number) => {
-  await api.delete(`/clients/${id}`);
-};
-
-// Mejor manejo de errores
-const handleApiError = (error: any) => {
-  if (error.response) {
-    throw new Error(error.response.data.message || 'Error en la solicitud');
+// Manejo centralizado de errores
+/*nst handleApiError = (error: unknown) => {
+  if (axios.isAxiosError(error) && error.response) {
+    throw new Error(error.response.data.message || error.response.data.error || "Error en la solicitud");
   } else {
-    throw new Error('Error de conexión con el servidor');
+    throw new Error("Error de conexión con el servidor");
   }
+};*/
+
+// Operaciones de autenticación
+export const authApi = {
+  login: (data: { username: string; password: string }) =>
+    api.post("/auth/login", data),
+  me: () => api.get("/auth/me"),
+  refreshToken: () => api.post("/auth/refresh-token"),
 };
 
-export const getSuppliers = async () => {
-  try {
-    const response = await api.get("/suppliers");
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-  }
+// Operaciones para Usuarios (Users)
+export const userApi = {
+  getAll: () => api.get("/users"),
+  create: (data: { username: string; password: string; role: number; status?: boolean }) =>
+    api.post("/users", data),
+  update: (id: number, data: { username?: string; role?: number; status?: boolean }) =>
+    api.put(`/users/${id}`, data),
+  delete: (id: number) => api.delete(`/users/${id}`),
 };
 
-export const getInventoryEntries = async (params?: {
-  supplierId?: number;
-  eggTypeId?: number;
-  startDate?: string;
-  endDate?: string;
-}) => {
-  const response = await api.get("/inventory", { params });
-  return response.data;
+// Operaciones para Roles (Roles)
+export const roleApi = {
+  getAll: () => api.get("/roles"),
+  create: (data: { name: string; description?: string }) =>
+    api.post("/roles", data),
+  assignPermissions: (roleId: number, permissions: number[]) =>
+    api.post("/roles/assign-permissions", { roleId, permissions }),
+  removePermissions: (roleId: number, permissions: number[]) =>
+    api.post("/roles/remove-permissions", { roleId, permissions }),
+  getPermissions: (userId: number) =>
+    api.get(`/users/${userId}/permissions`),
 };
 
-export const getInventoryEntryById = async (id: number) => {
-  const response = await api.get(`/inventory/${id}`);
-  return response.data;
+// Operaciones para Permisos (Permissions)
+export const permissionApi = {
+  getAll: () => api.get("/permissions"),
 };
 
-export const createInventoryEntry = async (data: {
-  supplierId: number;
-  details: {
-    eggTypeId: number;
-    boxCount: number;
-    weightTotal: number;
-  }[];
-}) => {
-  const response = await api.post("/inventory", data);
-  return response.data;
+// Operaciones para Módulos (Modules)
+export const moduleApi = {
+  getAll: () => api.get("/modules"),
+  create: (data: { name: string }) => api.post("/modules", data),
+  assignModules: (roleId: number, modules: number[]) =>
+    api.post("/modules/assign", { roleId, modules }),
+  removeModules: (roleId: number, modules: number[]) =>
+    api.post("/modules/remove", { roleId, modules }),
+  getRoleModules: (roleId: number) => api.get(`/roles/${roleId}/modules`),
+  getUserModules: (userId: number) => api.get(`/users/${userId}/modules`),
 };
 
-export const updateInventoryEntry = async (
-  id: number,
-  data: {
+// Operaciones para Tipos de Huevo (EggTypes)
+export const eggTypeApi = {
+  getAll: () => api.get("/types"),
+  create: (data: { name: string; description?: string; supplierId?: number }) =>
+    api.post("/types", data),
+  update: (
+    id: number,
+    data: { name?: string; description?: string; supplierId?: number }
+  ) => api.put(`/types/${id}`, data),
+  delete: (id: number) => api.delete(`/types/${id}`),
+  getSuppliers: (eggTypeId: number) => api.get(`/types/${eggTypeId}/suppliers`),
+  getBySupplier: (supplierId: number) => api.get(`/suppliers/${supplierId}/egg-types`),
+};
+
+// Operaciones para Proveedores (Suppliers)
+export const supplierApi = {
+  getAll: () => api.get("/suppliers"),
+  filter: (params: { name?: string; contact_info?: string }) =>
+    api.get("/suppliers/filter", { params }),
+  create: (data: {
+    name: string;
+    phone_number?: string;
+    email?: string;
+    address?: string;
+  }) => api.post("/suppliers", data),
+  update: (
+    id: number,
+    data: {
+      name?: string;
+      phone_number?: string;
+      email?: string;
+      address?: string;
+    }
+  ) => api.put(`/suppliers/${id}`, data),
+  delete: (id: number) => api.delete(`/suppliers/${id}`),
+};
+
+// Operaciones para Clientes (Clients)
+export const clientApi = {
+  getAll: (params?: { name?: string; status?: boolean; startDate?: string; endDate?: string }) =>
+    api.get("/clients", { params }),
+  getById: (id: number) => api.get(`/clients/${id}`),
+  create: (data: { name: string; contact_info: string; status?: boolean }) =>
+    api.post("/clients", data),
+  update: (
+    id: number,
+    data: { name?: string; contact_info?: string; status?: boolean }
+  ) => api.put(`/clients/${id}`, data),
+  delete: (id: number) => api.delete(`/clients/${id}`),
+};
+
+// Operaciones para Inventario (Inventory)
+export const inventoryApi = {
+  // Entradas de inventario
+  getEntries: (params?: {
+    supplierId?: number;
+    eggTypeId?: number;
+    startDate?: string;
+    endDate?: string;
+  }) => api.get("/inventory/entries", { params }),
+  getEntryById: (id: number) => api.get(`/inventory/entries/${id}`),
+  createEntry: (data: {
     supplierId: number;
     details: {
       eggTypeId: number;
       boxCount: number;
       weightTotal: number;
     }[];
-  }
-) => {
-  const response = await api.put(`/inventory/${id}`, data);
-  return response.data;
+  }) => api.post("/inventory/entries", data),
+  updateEntry: (
+    id: number,
+    data: {
+      entryDetails: {
+        eggTypeId: number;
+        boxCount: number;
+        weightTotal: number;
+      }[];
+    }
+  ) => api.put(`/inventory/entries/${id}`, data),
+  deleteEntry: (id: number) => api.delete(`/inventory/entries/${id}`),
+
+  // Stock
+  getCurrentStock: () => api.get("/inventory/stock"),
+  getStockByEggType: (id: number) => api.get(`/inventory/stock/${id}`),
+  adjustStock: (data: { eggTypeId: number; quantity: number; reason: string }) =>
+    api.post("/inventory/adjust-stock", data),
+
+  // Movimientos
+  getMovements: (params?: {
+    eggTypeId?: number;
+    startDate?: string;
+    endDate?: string;
+    movementType?: string;
+  }) => api.get("/inventory/movements", { params }),
 };
 
-export const deleteInventoryEntry = async (id: number) => {
-  await api.delete(`/inventory/${id}`);
+// Operaciones para Remisiones (Remissions)
+export const remissionApi = {
+  getAll: (params?: { clientId?: number; startDate?: string; endDate?: string }) =>
+    api.get("/remissions", { params }),
+  getById: (id: number) => api.get(`/remissions/${id}`),
+  create: (data: { date: string; clientId: number; details: {
+    eggTypeId: number;
+    supplierId: number;
+    boxCount: number;
+    weights?: number[];
+    weightTotal?: number;
+    pricePerKilo: number;
+  }[] }) => api.post("/remissions", data),
+  update: (
+    id: number,
+    data: { date?: string; clientId?: number }
+  ) => api.put(`/remissions/${id}`, data),
+  delete: (id: number) => api.delete(`/remissions/${id}`),
+
+  // Detalles de remisión
+  createDetail: (data: {
+    remissionId: number;
+    eggTypeId: number;
+    supplierId: number;
+    boxCount: number;
+    isByBox: boolean;
+    weights?: number[];
+    weightTotal?: number;
+    pricePerKilo: number;
+  }) => api.post("/remissions/details", data),
+  getDetail: (id: number) => api.get(`/remissions/details/${id}`),
+  updateDetail: (
+    id: number,
+    data: {
+      boxCount?: number;
+      isByBox?: boolean;
+      weights?: number[];
+      estimatedWeightPerBox?: number;
+      pricePerKilo?: number;
+    }
+  ) => api.put(`/remissions/details/${id}`, data),
 };
 
-
-
-
+// Operaciones para Pagos (Payments)
+export const paymentApi = {
+  getAll: (params?: {
+    clientId?: number;
+    startDate?: string;
+    endDate?: string;
+    method?: string;
+    minAmount?: number;
+    maxAmount?: number;
+  }) => api.get("/payments", { params }),
+  getById: (id: number) => api.get(`/payments/${id}`),
+  create: (data: {
+    clientId: number;
+    paymentDetails: {
+      remissionId: number;
+      amountAssigned: number;
+    }[];
+    method: string;
+  }) => api.post("/payments", data),
+  update: (
+    id: number,
+    data: { amount?: number; method?: string }
+  ) => api.put(`/payments/${id}`, data),
+  delete: (id: number) => api.delete(`/payments/${id}`),
+};
 
 export default api;

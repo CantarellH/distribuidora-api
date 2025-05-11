@@ -136,6 +136,22 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             <ListItemText primary="Proveedores" />
           </ListItemButton>
         </ListItem>
+        
+        <ListItem disablePadding>
+          <ListItemButton
+            component={Link}
+            to="/dashboard/egg-types"
+            selected={location.pathname === "/dashboard/egg-types"}
+            onClick={() => isMobile && setMobileOpen(false)}
+          >
+            <ListItemIcon>
+              <Handshake/>
+            </ListItemIcon>
+            <ListItemText primary="Tipos de Huevo" />
+          </ListItemButton>
+        </ListItem>
+
+
         <ListItem disablePadding>
           <ListItemButton
             component={Link}
@@ -149,6 +165,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             <ListItemText primary="Inventario" />
           </ListItemButton>
         </ListItem>
+
+
+
       </List>
     </div>
   );

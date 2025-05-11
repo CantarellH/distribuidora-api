@@ -34,13 +34,27 @@ export const createRemission = async (
     const remission = remissionRepository.create({ date, client });
     const savedRemission = await remissionRepository.save(remission);
 
-    let totalWeight = 0; // Peso total acumulado de la remisión
-    let totalCost = 0; // Costo total acumulado de la remisión
+    let totalWeight = 0;
+    let totalCost = 0;
 
     if (details && Array.isArray(details)) {
-      const remissionDetailRepository =
-        AppDataSource.getRepository(RemissionDetail);
+      const remissionDetailRepository = AppDataSource.getRepository(RemissionDetail);
+      const eggTypeRepository = AppDataSource.getRepository(EggType);
 
+      // Validación previa de stock
+      for (const detail of details) {
+        const { eggTypeId, boxCount } = detail;
+        const eggType = await eggTypeRepository.findOneBy({ id: eggTypeId });
+        
+        if (eggType && eggType.currentStock < boxCount) {
+          res.status(400).json({
+            error: `Stock insuficiente para ${eggType.name}. Disponible: ${eggType.currentStock}, Solicitado: ${boxCount}`,
+          });
+          return;
+        }
+      }
+
+      // Procesar detalles
       for (const detail of details) {
         const {
           eggTypeId,
@@ -51,70 +65,48 @@ export const createRemission = async (
           pricePerKilo,
         } = detail;
 
-        if (!eggTypeId || !supplierId || !boxCount || !pricePerKilo) {
-          res.status(400).json({
-            error:
-              "Detalles de remisión inválidos. Faltan campos obligatorios.",
-          });
-          return;
-        }
-
-        const eggType = await AppDataSource.getRepository(EggType).findOneBy({
-          id: eggTypeId,
-        });
+        const eggType = await eggTypeRepository.findOneBy({ id: eggTypeId });
         const supplier = await AppDataSource.getRepository(Supplier).findOneBy({
           id: supplierId,
         });
 
         if (!eggType || !supplier) {
           res.status(404).json({
-            error: `Tipo de huevo o proveedor no encontrado para el detalle.`,
+            error: `Tipo de huevo o proveedor no encontrado.`,
           });
           return;
         }
 
         if (weights && weights.length !== boxCount) {
           res.status(400).json({
-            error: "Para salidas por caja, se requieren los pesos individuales.",
+            error: "La cantidad de pesos no coincide con el número de cajas.",
           });
           return;
         }
 
-        // Cálculo del peso total
         const computedWeightTotal = weights
-          ? weights.reduce(
-              (total: number, weight: number) => total + weight - 2,
-              0
-            ) // Tara de 2 kg por caja
+          ? weights.reduce((total: number, weight: number) => total + weight - 2, 0)
           : weightTotal;
 
         if (!computedWeightTotal) {
           res.status(400).json({
-            error:
-              "Debe proporcionar 'weights' para salidas por caja o 'weightTotal' para salidas por tarima.",
+            error: "Peso total inválido.",
           });
           return;
         }
 
-        // Cálculo del peso estimado por caja para tarima
         const estimatedWeightPerBox = weights
           ? 0
-          : parseFloat(
-              ((weightTotal - boxCount * 2) / boxCount).toFixed(2)
-            );
+          : parseFloat(((weightTotal - boxCount * 2) / boxCount).toFixed(2));
 
-        // Cálculo del costo total del detalle
         const totalDetailCost = computedWeightTotal * pricePerKilo;
-
-        totalWeight += computedWeightTotal; // Acumular peso total
-        totalCost += totalDetailCost; // Acumular costo total
 
         const remissionDetail = remissionDetailRepository.create({
           remission: savedRemission,
           eggType,
           supplier,
           boxCount,
-          isByBox: !!weights, // Si hay pesos, es salida por caja
+          isByBox: !!weights,
           weightTotal: computedWeightTotal,
           estimatedWeightPerBox,
           pricePerKilo,
@@ -122,23 +114,27 @@ export const createRemission = async (
 
         await remissionDetailRepository.save(remissionDetail);
 
-        // Guardar pesos individuales si es por caja
-        if (weights) {
-          const boxWeightRepository =
-            AppDataSource.getRepository(BoxWeight);
+        // Actualizar stock
+        eggType.currentStock -= boxCount;
+        await eggTypeRepository.save(eggType);
 
+        if (weights) {
+          const boxWeightRepository = AppDataSource.getRepository(BoxWeight);
           for (const weight of weights) {
-            const boxWeight = boxWeightRepository.create({
-              remissionDetail,
-              weight: weight - 2, // Tara de 2 kg por caja
-            });
-            await boxWeightRepository.save(boxWeight);
+            await boxWeightRepository.save(
+              boxWeightRepository.create({
+                remissionDetail,
+                weight: weight - 2,
+              })
+            );
           }
         }
+
+        totalWeight += computedWeightTotal;
+        totalCost += totalDetailCost;
       }
     }
 
-    // Actualizar peso total y costo total en la remisión
     savedRemission.weightTotal = totalWeight;
     savedRemission.totalCost = totalCost;
     await remissionRepository.save(savedRemission);
@@ -165,7 +161,7 @@ export const createRemissionDetail = async (
       boxCount,
       isByBox,
       weights,
-      weightTotal, // Peso total de la tarima
+      weightTotal,
       pricePerKilo,
     } = req.body;
 
@@ -186,7 +182,7 @@ export const createRemissionDetail = async (
 
     const remission = await AppDataSource.getRepository(Remission).findOne({
       where: { id: remissionId },
-      relations: ["details"], // Para actualizar los totales
+      relations: ["details"],
     });
     if (!remission) {
       res.status(404).json({ error: "Remisión no encontrada." });
@@ -209,6 +205,14 @@ export const createRemissionDetail = async (
       return;
     }
 
+    // Validar stock
+    if (eggType.currentStock < boxCount) {
+      res.status(400).json({
+        error: `Stock insuficiente. Solo hay ${eggType.currentStock} disponibles.`,
+      });
+      return;
+    }
+
     const remissionDetailRepository =
       AppDataSource.getRepository(RemissionDetail);
     const boxWeightRepository = AppDataSource.getRepository(BoxWeight);
@@ -217,7 +221,6 @@ export const createRemissionDetail = async (
     let estimatedWeightPerBox: number = 0;
 
     if (isByBox) {
-      // Validación adicional para pesos individuales
       if (!weights || weights.length !== boxCount) {
         res.status(400).json({
           error:
@@ -229,25 +232,22 @@ export const createRemissionDetail = async (
       calculatedWeightTotal = weights.reduce(
         (total: number, weight: number) => total + weight - 2,
         0
-      ); // Restamos la tara de 2 kg por caja
+      );
 
-      // Guardar pesos individuales
       for (const weight of weights) {
         const boxWeight = boxWeightRepository.create({
-          remissionDetail: null, // Temporalmente null hasta que guardemos el detalle
-          weight: weight - 2, // Restar la tara de 2 kg
+          remissionDetail: null,
+          weight: weight - 2,
         });
         await boxWeightRepository.save(boxWeight);
       }
     } else {
-      // Es por tarima
       estimatedWeightPerBox = parseFloat(
         ((weightTotal - boxCount * 2) / boxCount).toFixed(2)
-      ); // Peso estimado por caja
-      calculatedWeightTotal = weightTotal; // Se toma directamente el peso total
+      );
+      calculatedWeightTotal = weightTotal;
     }
 
-    // Calcular costo total del detalle
     const totalDetailCost = calculatedWeightTotal * pricePerKilo;
 
     const remissionDetail = remissionDetailRepository.create({
@@ -265,32 +265,24 @@ export const createRemissionDetail = async (
       remissionDetail
     );
 
-    // Si es por caja, actualizar referencia en boxWeights
-    if (isByBox && weights) {
-      const savedRemissionDetail = await remissionDetailRepository.save(
-        remissionDetail
-      );
+    // Actualizar stock
+    eggType.currentStock -= boxCount;
+    await AppDataSource.getRepository(EggType).save(eggType);
 
+    if (isByBox && weights) {
       for (const weight of weights) {
         const boxWeight = boxWeightRepository.create({
-          remissionDetail: savedRemissionDetail, // Asignar el detalle de la remisión después de guardarlo
-          weight: weight - 2, // Restar la tara de 2 kg
+          remissionDetail: savedRemissionDetail,
+          weight: weight - 2,
         });
         await boxWeightRepository.save(boxWeight);
       }
     }
 
-    // Actualizar los totales de la remisión
     remission.weightTotal =
-      remission.details.reduce((sum, detail) => sum + detail.weightTotal, 0) +
-      calculatedWeightTotal;
-
+      (remission.weightTotal || 0) + calculatedWeightTotal;
     remission.totalCost =
-      remission.details.reduce(
-        (sum, detail) => sum + detail.pricePerKilo * detail.weightTotal,
-        0
-      ) + totalDetailCost;
-
+      (remission.totalCost || 0) + totalDetailCost;
     await AppDataSource.getRepository(Remission).save(remission);
 
     res.status(201).json({
@@ -421,10 +413,11 @@ export const updateRemissionDetail = async (
     const remissionDetailRepository =
       AppDataSource.getRepository(RemissionDetail);
     const boxWeightRepository = AppDataSource.getRepository(BoxWeight);
+    const eggTypeRepository = AppDataSource.getRepository(EggType);
 
     const remissionDetail = await remissionDetailRepository.findOne({
       where: { id: parseInt(id, 10) },
-      relations: ["boxWeights", "remission"],
+      relations: ["boxWeights", "remission", "eggType"],
     });
 
     if (!remissionDetail) {
@@ -432,7 +425,20 @@ export const updateRemissionDetail = async (
       return;
     }
 
-    // Actualizar campos básicos
+    const eggType = remissionDetail.eggType;
+    const originalBoxCount = remissionDetail.boxCount;
+
+    // Validar stock si se modifica la cantidad
+    if (boxCount && boxCount !== originalBoxCount) {
+      const stockDifference = boxCount - originalBoxCount;
+      if (eggType.currentStock < stockDifference) {
+        res.status(400).json({
+          error: `Stock insuficiente. Disponible: ${eggType.currentStock}, Necesario: ${stockDifference}`,
+        });
+        return;
+      }
+    }
+
     remissionDetail.boxCount = boxCount || remissionDetail.boxCount;
     remissionDetail.isByBox =
       isByBox !== undefined ? isByBox : remissionDetail.isByBox;
@@ -443,10 +449,9 @@ export const updateRemissionDetail = async (
     let weightTotal = 0;
 
     if (isByBox && weights) {
-      // Si es por caja, eliminar pesos antiguos y calcular nuevos
-      await boxWeightRepository.delete({ remissionDetail });
+      await boxWeightRepository.delete({ remissionDetail: { id: remissionDetail.id } });
       weightTotal = weights.reduce(
-        (total: number, weight: number) => total + weight - 2, // Tara de 2 kg por caja
+        (total: number, weight: number) => total + weight - 2,
         0
       );
 
@@ -458,26 +463,27 @@ export const updateRemissionDetail = async (
         await boxWeightRepository.save(boxWeight);
       }
     } else if (!isByBox) {
-      // Si no es por caja, calcular peso total basado en el peso estimado por caja
       weightTotal = remissionDetail.estimatedWeightPerBox * remissionDetail.boxCount;
     }
 
     remissionDetail.weightTotal = weightTotal;
     remissionDetail.pricePerKilo = pricePerKilo || remissionDetail.pricePerKilo;
 
-    // Actualizar costo total basado en el peso total y el precio por kilo
-    const totalDetailCost = weightTotal * remissionDetail.pricePerKilo;
+    // Actualizar stock si cambió la cantidad
+    if (boxCount && boxCount !== originalBoxCount) {
+      const stockDifference = boxCount - originalBoxCount;
+      eggType.currentStock -= stockDifference;
+      await eggTypeRepository.save(eggType);
+    }
 
-    // Actualizar el detalle de la remisión
     await remissionDetailRepository.save(remissionDetail);
 
-    // Actualizar el costo total de la remisión principal
     const remissionRepository = AppDataSource.getRepository(Remission);
     const remission = remissionDetail.remission;
-    remission.totalCost =
-      (remission.totalCost || 0) -
-      remissionDetail.weightTotal * remissionDetail.pricePerKilo + // Costo anterior
-      totalDetailCost; // Costo actualizado
+    remission.totalCost = remission.details.reduce(
+      (sum, detail) => sum + detail.weightTotal * detail.pricePerKilo,
+      0
+    );
     await remissionRepository.save(remission);
 
     res.status(200).json({
@@ -501,7 +507,7 @@ export const updateRemission = async (
     const remissionRepository = AppDataSource.getRepository(Remission);
     const remission = await remissionRepository.findOne({
       where: { id: parseInt(id, 10) },
-      relations: ["details"], // Para actualizar el costo total en caso de cambios
+      relations: ["details"],
     });
 
     if (!remission) {
@@ -522,12 +528,10 @@ export const updateRemission = async (
       remission.client = client;
     }
 
-    // Recalcular el costo total basado en los detalles
     remission.totalCost = remission.details.reduce(
       (total, detail) => total + detail.weightTotal * detail.pricePerKilo,
       0
     );
-
     await remissionRepository.save(remission);
 
     res.status(200).json({
@@ -549,7 +553,7 @@ export const deleteRemission = async (
     const remissionRepository = AppDataSource.getRepository(Remission);
     const remission = await remissionRepository.findOne({
       where: { id: parseInt(id, 10) },
-      relations: ["paymentDetails"],
+      relations: ["paymentDetails", "details", "details.eggType"],
     });
 
     if (!remission) {
@@ -557,12 +561,20 @@ export const deleteRemission = async (
       return;
     }
 
-    // Eliminar detalles de pago relacionados
-    for (const paymentDetail of remission.paymentDetails) {
-      await AppDataSource.getRepository(PaymentDetail).remove(paymentDetail);
+    // Revertir stock
+    const eggTypeRepository = AppDataSource.getRepository(EggType);
+    for (const detail of remission.details) {
+      const eggType = await eggTypeRepository.findOneBy({ id: detail.eggType.id });
+      if (eggType) {
+        eggType.currentStock += detail.boxCount;
+        await eggTypeRepository.save(eggType);
+      }
     }
 
-    // Eliminar la remisión
+    await AppDataSource.getRepository(PaymentDetail).delete({
+      remission: { id: remission.id },
+    });
+
     await remissionRepository.remove(remission);
 
     res.status(200).json({ message: "Remisión eliminada con éxito." });

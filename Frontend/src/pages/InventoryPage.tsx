@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from "react"; // Added React import
-import {
-  getInventoryEntries,
-  createInventoryEntry,
-  updateInventoryEntry,
-  deleteInventoryEntry,
-  getSuppliers,
-  getEggTypesBySupplier, // Added this import
-} from "../api/api";
+import { inventoryApi, supplierApi, eggTypeApi } from "../api/api"; 
+import { useLocation } from "react-router-dom"; 
 import DashboardLayout from "../components/DashboardLayout";
 import {
   Typography,
@@ -70,7 +64,8 @@ interface InventoryEntry {
   details: InventoryEntryDetail[];
 }
 
-const InventoryPage = () => {
+const InventoryPage: React.FC = () => {
+  const location = useLocation();
   const [entries, setEntries] = useState<InventoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +80,10 @@ const InventoryPage = () => {
     details: [{ eggTypeId: "", boxCount: "", weightTotal: "" }],
   });
 
+   
+  useEffect(() => {
+    
+  }, [location.pathname]);
   useEffect(() => {
     fetchData();
   }, []);
@@ -93,8 +92,8 @@ const InventoryPage = () => {
     try {
       setLoading(true);
       const [inventoryData, suppliersData] = await Promise.all([
-        getInventoryEntries(),
-        getSuppliers(),
+        inventoryApi.getAll(),
+        supplierApi.getAll(),
       ]);
       setEntries(inventoryData);
       setSuppliers(suppliersData);
@@ -108,6 +107,7 @@ const InventoryPage = () => {
 
   const toggleRow = (id: number) => {
     setExpandedRows((prev) =>
+
       prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
     );
   };
@@ -115,7 +115,7 @@ const InventoryPage = () => {
   const fetchEggTypesBySupplier = async (supplierId: number) => {
     try {
       setLoadingEggTypes(true);
-      const data = await getEggTypesBySupplier(supplierId);
+      const data = await eggTypeApi.getBySupplier(supplierId);
       setFilteredEggTypes(data);
     } catch (err) {
       console.error("Error al obtener tipos de huevo:", err);
@@ -181,9 +181,9 @@ const InventoryPage = () => {
       };
 
       if (currentEntry) {
-        await updateInventoryEntry(currentEntry.id, payload);
+        await inventoryApi.update(currentEntry.id, payload);
       } else {
-        await createInventoryEntry(payload);
+        await inventoryApi.create(payload);
       }
       await fetchData();
       setOpenDialog(false);
@@ -196,7 +196,7 @@ const InventoryPage = () => {
   const handleDelete = async (id: number) => {
     if (window.confirm("¿Estás seguro de eliminar esta entrada?")) {
       try {
-        await deleteInventoryEntry(id);
+        await inventoryApi.delete(id);
         await fetchData();
       } catch (err) {
         setError("Error al eliminar la entrada");

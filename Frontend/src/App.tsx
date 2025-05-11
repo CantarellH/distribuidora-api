@@ -5,8 +5,9 @@ import UsersPage from "./pages/UsersPage";
 import RolesPage from "./pages/RolesPage";
 import ClientPage from "./pages/ClientPage";
 import RecordsPage from "./pages/RecordsPage";
-import SuppliersPage from "./pages/SuppliersPage"; // ✅ Importa la nueva página
-import InventoryPage from "./pages/InventoryPage"; // ✅ Importa la nueva página
+import SuppliersPage from "./pages/SuppliersPage";
+import InventoryPage from "./pages/InventoryPage";
+import EggTypesPage from "./pages/EggTypesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -55,7 +56,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* ✅ Nueva ruta para Tipos de Huevo */}
         <Route
           path="/dashboard/Suppliers"
           element={
@@ -64,8 +64,15 @@ function App() {
             </ProtectedRoute>
           }
         />
-                {/* ✅ Nueva ruta para Tipos de Huevo */}
-                <Route
+        <Route
+          path="/dashboard/egg-types"
+          element={
+            <ProtectedRoute>
+              <EggTypesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/dashboard/Inventory"
           element={
             <ProtectedRoute>

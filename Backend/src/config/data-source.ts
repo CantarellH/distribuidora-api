@@ -15,6 +15,7 @@ import { RolePermission } from '../models/RolePermission';
 import { Module } from '../models/Modules';
 import { RoleModule } from '../models/RoleModule';
 import { EggTypeSupplier } from '../models/EggTypeSupplier';
+import {InventoryMovement} from '../models/InventoryMovement';
 import { Payment } from '../models/Payment';
 import { PaymentDetail } from '../models/PaymentDetail';
 import { join } from "path";
@@ -50,5 +51,6 @@ export const AppDataSource = new DataSource({
     Payment,
     PaymentDetail,
     RolePermission,
+    InventoryMovement,
   ],
 });

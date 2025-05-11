@@ -2,46 +2,9 @@ import { useEffect, useState } from "react";
 import React from "react";
 import DashboardLayout from "../components/DashboardLayout";
 import { useTheme, useMediaQuery } from "@mui/material";
-import {
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Button,
-  Box,
-  IconButton,
-  Collapse,
-  Chip,
-  Slide,
-  TextField,
-  Alert,
-  CircularProgress
-} from "@mui/material";
-import {
-  KeyboardArrowDown, 
-  KeyboardArrowUp, 
-  Add, 
-  Edit, 
-  Close, 
-  Phone, 
-  Email,
-  LocationOn,
-  Delete
-} from "@mui/icons-material";
-import { 
-  getsuppliers as getSuppliers,
-  createSuppliers,
-  updateSuppliers,
-  deleteSupplier,
-  getEggTypesBySupplier,
-  createEggType,
-  updateEggType,
-  deleteEggType,
-} from "../api/api";
+import {  Typography,  Table,  TableBody,  TableCell,  TableContainer,  TableHead,  TableRow,  Paper,  Button,  Box,  IconButton,  Collapse, Chip,  Slide,  TextField,  Alert,  CircularProgress} from "@mui/material";
+import {  KeyboardArrowDown,   KeyboardArrowUp,   Add,   Edit,   Close,   Phone,   Email,  LocationOn,  Delete} from "@mui/icons-material";
+import { supplierApi, eggTypeApi } from "../api/api";
 
 interface Product {
   id: number;
@@ -50,6 +13,14 @@ interface Product {
   supplierId: number;
   createdAt: string;
   updatedAt: string;
+}
+interface ApiError {
+  response?: {
+    data?: {
+      error?: string;
+    };
+  };
+  message?: string;
 }
 
 interface Supplier {
@@ -98,33 +69,32 @@ const SuppliersPage: React.FC = () => {
   }, []);
 
   const fetchSuppliers = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data: Supplier[] = await getSuppliers();
-      setSuppliers(data);
-    } catch (err) {
-      console.error("Error obteniendo proveedores:", err);
-      setError("Error al cargar los proveedores. Por favor, inténtelo de nuevo.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  setError(null);
+  try {
+    const response = await supplierApi.getAll();
+    setSuppliers(response.data); // Extrae .data de la respuesta
+  } catch (err) {
+    console.error("Error obteniendo proveedores:", err);
+    setError("Error al cargar los proveedores. Por favor, inténtelo de nuevo.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchProducts = async (supplierId: number) => {
-    try {
-      const products = await getEggTypesBySupplier(supplierId);
-      setSuppliers((prev) =>
-        prev.map((supplier) =>
-          supplier.id === supplierId ? { ...supplier, products } : supplier
-        )
-      );
-    } catch (err) {
-      console.error("Error obteniendo productos:", err);
-      // Show error in a more user-friendly way
-      setError(`Error al cargar los productos del proveedor #${supplierId}`);
-    }
-  };
+  try {
+    const response = await eggTypeApi.getBySupplier(supplierId);
+    setSuppliers((prev) =>
+      prev.map((supplier) =>
+        supplier.id === supplierId ? { ...supplier, products: response.data } : supplier
+      )
+    );
+  } catch (err) {
+    console.error("Error obteniendo productos:", err);
+    setError(`Error al cargar los productos del proveedor #${supplierId}`);
+  }
+};
 
   const toggleRow = (supplierId: number) => {
     if (expandedRows.includes(supplierId)) {
@@ -191,16 +161,17 @@ const SuppliersPage: React.FC = () => {
       };
 
       if (selectedSupplier) {
-        await updateSuppliers(selectedSupplier.id, payload);
+        await supplierApi.update(selectedSupplier.id, payload);
       } else {
-        await createSuppliers(payload);
+        await supplierApi.create(payload);
       }
 
       await fetchSuppliers();
       setActiveForm(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error al guardar proveedor:", err);
-      setError(err.response?.data?.error || "Error al guardar el proveedor");
+      const error = err as ApiError;
+      setError(error.response?.data?.error || "Error al guardar el proveedor");
     }
   };
 
@@ -233,16 +204,17 @@ const SuppliersPage: React.FC = () => {
       };
 
       if (selectedProduct) {
-        await updateEggType(selectedProduct.id, payload);
+        await eggTypeApi.update(selectedProduct.id, payload);
       } else {
-        await createEggType(payload);
+        await eggTypeApi.create(payload);
       }
 
       await fetchProducts(selectedSupplier.id);
       setActiveForm(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error al guardar producto:", err);
-      setError(err.response?.data?.error || "Error al guardar el producto");
+      const error = err as ApiError;
+      setError(error.response?.data?.error || "Error al guardar el producto");
     }
   };
 
@@ -250,11 +222,12 @@ const SuppliersPage: React.FC = () => {
   const handleDeleteSupplier = async (id: number) => {
     if (window.confirm("¿Seguro que quieres eliminar este proveedor?")) {
       try {
-        await deleteSupplier(id);
+        await supplierApi.delete(id);
         setSuppliers((prev) => prev.filter((supplier) => supplier.id !== id));
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error al eliminar proveedor:", err);
-        setError(err.response?.data?.error || "Error al eliminar el proveedor");
+        const error = err as ApiError;
+        setError(error.response?.data?.error || "Error al eliminar el proveedor");
       }
     }
   };
@@ -262,11 +235,12 @@ const SuppliersPage: React.FC = () => {
   const handleDeleteProduct = async (productId: number, supplierId: number) => {
     if (window.confirm("¿Seguro que quieres eliminar este producto?")) {
       try {
-        await deleteEggType(productId);
+        await eggTypeApi.delete(productId);
         await fetchProducts(supplierId);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error al eliminar producto:", err);
-        setError(err.response?.data?.error || "Error al eliminar el producto");
+        const error = err as ApiError;
+        setError(error.response?.data?.error || "Error al eliminar el producto");
       }
     }
   };

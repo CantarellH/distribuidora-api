@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import { 
-  getClients, 
-  getClientById, 
-  createClient, 
-  updateClient, 
-  deleteClient 
-} from "../api/api";
+import { clientApi } from "../api/api";
 import DashboardLayout from "../components/DashboardLayout";
 import {
   Typography,
@@ -37,7 +31,7 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -46,7 +40,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   Search as SearchIcon,
-  FilterList as FilterIcon
+  FilterList as FilterIcon,
 } from "@mui/icons-material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { format, parseISO } from "date-fns";
@@ -54,30 +48,33 @@ import { format, parseISO } from "date-fns";
 interface Client {
   id: number;
   name: string;
-  email?: string;
-  supplierId?: number;
+  contact_info: string;
   status: boolean;
   created_at: string;
 }
 
+interface ClientFormData {
+  name: string;
+  contact_info: string;
+  status: boolean;
+}
+
 const ClientsPage: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-  
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   const [clients, setClients] = useState<Client[]>([]);
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [newClient, setNewClient] = useState({
+  const [newClient, setNewClient] = useState<ClientFormData>({
     name: "",
-    description: "",
-    supplierId: undefined as number | undefined,
-    status: true
+    contact_info: "",
+    status: true,
   });
   const [loading, setLoading] = useState({
     clients: false,
-    action: false
+    action: false,
   });
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,94 +88,93 @@ const ClientsPage: React.FC = () => {
   }, []);
 
   const fetchClients = async () => {
-    try {
-      setLoading(prev => ({ ...prev, clients: true }));
-      setError(null);
-      
-      const clientsData = await getClients();
-      setClients(clientsData);
-    } catch (err) {
-      console.error("Error fetching clients:", err);
-      setError("Error al cargar los clientes. Por favor, intente nuevamente.");
-    } finally {
-      setLoading(prev => ({ ...prev, clients: false }));
-    }
-  };
+  try {
+    setLoading((prev) => ({ ...prev, clients: true }));
+    setError(null);
+
+    const response = await clientApi.getAll();
+    setClients(response.data); // Asume que los datos están en response.data
+  } catch (err: unknown) {
+    console.error("Error fetching clients:", err);
+    setError(
+      err instanceof Error ? err.message : "Error al cargar los clientes"
+    );
+  } finally {
+    setLoading((prev) => ({ ...prev, clients: false }));
+  }
+};
 
   const handleCreateClient = async () => {
-    if (!newClient.name) {
-      setError("El nombre es requerido");
+    if (!newClient.name || !newClient.contact_info) {
+      setError("Nombre e información de contacto son requeridos");
       return;
     }
 
-    setLoading(prev => ({ ...prev, action: true }));
+    setLoading((prev) => ({ ...prev, action: true }));
     setError(null);
-    
+
     try {
-      await createClient({
-        name: newClient.name,
-        description: newClient.description,
-        supplierId: newClient.supplierId
-      });
+      await clientApi.create(newClient);
       setOpenCreateDialog(false);
-      setNewClient({ name: "", description: "", supplierId: undefined, status: true });
+      setNewClient({ name: "", contact_info: "", status: true });
       await fetchClients();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error creating client:", err);
-      setError(err.response?.data?.message || "Error al crear el cliente");
+      setError(
+        err instanceof Error ? err.message : "Error al crear el cliente"
+      );
     } finally {
-      setLoading(prev => ({ ...prev, action: false }));
+      setLoading((prev) => ({ ...prev, action: false }));
     }
   };
 
   const handleUpdateClient = async () => {
     if (!selectedClient) return;
 
-    setLoading(prev => ({ ...prev, action: true }));
+    setLoading((prev) => ({ ...prev, action: true }));
     setError(null);
-    
+
     try {
-      await updateClient(selectedClient.id, {
+      await clientApi.update(selectedClient.id, {
         name: selectedClient.name,
-        description: selectedClient.description,
-        supplierId: selectedClient.supplierId
+        contact_info: selectedClient.contact_info,
+        status: selectedClient.status,
       });
       setOpenEditDialog(false);
       await fetchClients();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error updating client:", err);
-      setError(err.response?.data?.message || "Error al actualizar el cliente");
+      setError(
+        err instanceof Error ? err.message : "Error al actualizar el cliente"
+      );
     } finally {
-      setLoading(prev => ({ ...prev, action: false }));
+      setLoading((prev) => ({ ...prev, action: false }));
     }
   };
 
   const handleDeleteClient = async (id: number) => {
-    if (!window.confirm("¿Está seguro que desea eliminar este cliente?")) return;
+    if (!window.confirm("¿Está seguro que desea eliminar este cliente?"))
+      return;
 
-    setLoading(prev => ({ ...prev, action: true }));
+    setLoading((prev) => ({ ...prev, action: true }));
     setError(null);
-    
+
     try {
-      await deleteClient(id);
+      await clientApi.delete(id);
       await fetchClients();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error deleting client:", err);
-      setError("Error al eliminar el cliente");
+      setError(
+        err instanceof Error ? err.message : "Error al eliminar el cliente"
+      );
     } finally {
-      setLoading(prev => ({ ...prev, action: false }));
+      setLoading((prev) => ({ ...prev, action: false }));
     }
   };
 
-  const handleOpenEditDialog = async (client: Client) => {
-    try {
-      const fullClient = await getClientById(client.id);
-      setSelectedClient(fullClient);
-      setOpenEditDialog(true);
-    } catch (err) {
-      console.error("Error fetching client details:", err);
-      setError("Error al cargar los detalles del cliente");
-    }
+  const handleOpenEditDialog = (client: Client) => {
+    setSelectedClient(client);
+    setOpenEditDialog(true);
   };
 
   const applyFilters = () => {
@@ -195,46 +191,47 @@ const ClientsPage: React.FC = () => {
     setShowFilters(false);
   };
 
-  const filteredClients = clients.filter(client => {
-    // Filtro por nombre
-    const nameMatch = client.name.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Filtro por estado
-    const statusMatch = statusFilter === "all" || client.status === statusFilter;
-    
-    // Filtro por fecha
+  const filteredClients = clients.filter((client) => {
+    const nameMatch = client.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const statusMatch =
+      statusFilter === "all" || client.status === statusFilter;
     let dateMatch = true;
+
     if (startDate && endDate) {
       const clientDate = new Date(client.created_at);
       dateMatch = clientDate >= startDate && clientDate <= endDate;
     }
-    
+
     return nameMatch && statusMatch && dateMatch;
   });
 
   return (
     <DashboardLayout>
       <Box sx={{ p: isMobile ? 1 : 3 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: isMobile ? 'column' : 'row', 
-          justifyContent: 'space-between', 
-          alignItems: isMobile ? 'flex-start' : 'center',
-          mb: 3,
-          gap: isMobile ? 2 : 0
-        }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            justifyContent: "space-between",
+            alignItems: isMobile ? "flex-start" : "center",
+            mb: 3,
+            gap: isMobile ? 2 : 0,
+          }}
+        >
           <Typography variant={isMobile ? "h5" : "h4"} gutterBottom>
             Gestión de Clientes
           </Typography>
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
+
+          <Box sx={{ display: "flex", gap: 2 }}>
             <Button
               variant="outlined"
               startIcon={<FilterIcon />}
               onClick={() => setShowFilters(!showFilters)}
               size={isMobile ? "small" : "medium"}
             >
-              {isMobile ? '' : 'Filtros'}
+              {isMobile ? "" : "Filtros"}
             </Button>
             <Button
               variant="contained"
@@ -244,7 +241,7 @@ const ClientsPage: React.FC = () => {
               disabled={loading.clients}
               size={isMobile ? "small" : "medium"}
             >
-              {isMobile ? <AddIcon /> : 'Nuevo Cliente'}
+              {isMobile ? <AddIcon /> : "Nuevo Cliente"}
             </Button>
           </Box>
         </Box>
@@ -273,12 +270,14 @@ const ClientsPage: React.FC = () => {
                   <InputLabel>Estado</InputLabel>
                   <Select
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as boolean | "all")}
+                    onChange={(e) =>
+                      setStatusFilter(e.target.value as boolean | "all")
+                    }
                     label="Estado"
                   >
                     <MenuItem value="all">Todos</MenuItem>
-                    <MenuItem value={true}>Activos</MenuItem>
-                    <MenuItem value={false}>Inactivos</MenuItem>
+                    <MenuItem value={"true" as string}>Activos</MenuItem>
+                    <MenuItem value={"false" as string}>Inactivos</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -290,8 +289,8 @@ const ClientsPage: React.FC = () => {
                   slotProps={{
                     textField: {
                       size: isMobile ? "small" : "medium",
-                      fullWidth: true
-                    }
+                      fullWidth: true,
+                    },
                   }}
                 />
               </Grid>
@@ -303,12 +302,16 @@ const ClientsPage: React.FC = () => {
                   slotProps={{
                     textField: {
                       size: isMobile ? "small" : "medium",
-                      fullWidth: true
-                    }
+                      fullWidth: true,
+                    },
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <Grid
+                item
+                xs={12}
+                sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}
+              >
                 <Button variant="outlined" onClick={resetFilters}>
                   Limpiar
                 </Button>
@@ -327,18 +330,23 @@ const ClientsPage: React.FC = () => {
         )}
 
         {loading.clients ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
             <CircularProgress />
           </Box>
         ) : (
-          <TableContainer component={Paper} sx={{ maxWidth: '100%', overflowX: 'auto' }}>
-            <Table size={isMobile ? "small" : "medium"} aria-label="clients table">
+          <TableContainer
+            component={Paper}
+            sx={{ maxWidth: "100%", overflowX: "auto" }}
+          >
+            <Table
+              size={isMobile ? "small" : "medium"}
+              aria-label="clients table"
+            >
               <TableHead>
                 <TableRow>
                   {!isMobile && <TableCell>ID</TableCell>}
                   <TableCell>Nombre</TableCell>
-                  <TableCell>Descripción</TableCell>
-                  {!isMobile && <TableCell>Proveedor ID</TableCell>}
+                  <TableCell>Contacto</TableCell>
                   {!isMobile && <TableCell>Fecha Registro</TableCell>}
                   <TableCell>Estado</TableCell>
                   <TableCell align="center">Acciones</TableCell>
@@ -350,22 +358,25 @@ const ClientsPage: React.FC = () => {
                     {!isMobile && <TableCell>{client.id}</TableCell>}
                     <TableCell>{client.name}</TableCell>
                     <TableCell>
-                      <Tooltip title={client.description || 'Sin descripción'}>
-                        <span style={{
-                          display: 'inline-block',
-                          width: isMobile ? 100 : 150,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
-                          {client.email || 'N/A'}
+                      <Tooltip title={client.contact_info}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            width: isMobile ? 100 : 150,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {client.contact_info}
                         </span>
                       </Tooltip>
                     </TableCell>
-                    {!isMobile && <TableCell>{client.supplierId || 'N/A'}</TableCell>}
                     {!isMobile && (
                       <TableCell>
-                        {client.created_at ? format(parseISO(client.created_at), 'dd/MM/yyyy') : 'N/A'}
+                        {client.created_at
+                          ? format(parseISO(client.created_at), "dd/MM/yyyy")
+                          : "N/A"}
                       </TableCell>
                     )}
                     <TableCell>
@@ -396,7 +407,7 @@ const ClientsPage: React.FC = () => {
                           <EditIcon fontSize={isMobile ? "small" : "medium"} />
                         </IconButton>
                       </Tooltip>
-                      
+
                       <Tooltip title="Eliminar">
                         <IconButton
                           color="error"
@@ -404,7 +415,9 @@ const ClientsPage: React.FC = () => {
                           disabled={loading.action}
                           size={isMobile ? "small" : "medium"}
                         >
-                          <DeleteIcon fontSize={isMobile ? "small" : "medium"} />
+                          <DeleteIcon
+                            fontSize={isMobile ? "small" : "medium"}
+                          />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
@@ -432,47 +445,37 @@ const ClientsPage: React.FC = () => {
               fullWidth
               variant="outlined"
               value={newClient.name}
-              onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+              onChange={(e) =>
+                setNewClient({ ...newClient, name: e.target.value })
+              }
               disabled={loading.action}
               sx={{ mb: 2 }}
               size={isMobile ? "small" : "medium"}
               required
             />
-            
+
             <TextField
               margin="dense"
-              label="Descripción"
+              label="Información de contacto"
               fullWidth
               variant="outlined"
-              value={newClient.description}
-              onChange={(e) => setNewClient({ ...newClient, description: e.target.value })}
+              value={newClient.contact_info}
+              onChange={(e) =>
+                setNewClient({ ...newClient, contact_info: e.target.value })
+              }
               disabled={loading.action}
               sx={{ mb: 2 }}
               size={isMobile ? "small" : "medium"}
-              multiline
-              rows={3}
+              required
             />
-            
-            <TextField
-              margin="dense"
-              label="ID de Proveedor"
-              type="number"
-              fullWidth
-              variant="outlined"
-              value={newClient.supplierId || ''}
-              onChange={(e) => setNewClient({ 
-                ...newClient, 
-                supplierId: e.target.value ? parseInt(e.target.value) : undefined 
-              })}
-              disabled={loading.action}
-              size={isMobile ? "small" : "medium"}
-            />
-            
+
             <FormControlLabel
               control={
                 <Switch
                   checked={newClient.status}
-                  onChange={(e) => setNewClient({ ...newClient, status: e.target.checked })}
+                  onChange={(e) =>
+                    setNewClient({ ...newClient, status: e.target.checked })
+                  }
                   color="primary"
                 />
               }
@@ -481,7 +484,7 @@ const ClientsPage: React.FC = () => {
             />
           </DialogContent>
           <DialogActions>
-            <Button 
+            <Button
               onClick={() => setOpenCreateDialog(false)}
               disabled={loading.action}
               size={isMobile ? "small" : "medium"}
@@ -496,7 +499,7 @@ const ClientsPage: React.FC = () => {
               startIcon={loading.action ? <CircularProgress size={20} /> : null}
               size={isMobile ? "small" : "medium"}
             >
-              {loading.action ? 'Creando...' : 'Crear'}
+              {loading.action ? "Creando..." : "Crear"}
             </Button>
           </DialogActions>
         </Dialog>
@@ -520,53 +523,46 @@ const ClientsPage: React.FC = () => {
                   fullWidth
                   variant="outlined"
                   value={selectedClient.name}
-                  onChange={(e) => setSelectedClient({ ...selectedClient, name: e.target.value })}
+                  onChange={(e) =>
+                    setSelectedClient({
+                      ...selectedClient,
+                      name: e.target.value,
+                    })
+                  }
                   disabled={loading.action}
                   sx={{ mb: 2 }}
                   size={isMobile ? "small" : "medium"}
                   required
                 />
-                
+
                 <TextField
                   margin="dense"
-                  label="Descripción"
+                  label="Información de contacto"
                   fullWidth
                   variant="outlined"
-                  value={selectedClient.description || ''}
-                  onChange={(e) => setSelectedClient({ 
-                    ...selectedClient, 
-                    description: e.target.value 
-                  })}
+                  value={selectedClient.contact_info}
+                  onChange={(e) =>
+                    setSelectedClient({
+                      ...selectedClient,
+                      contact_info: e.target.value,
+                    })
+                  }
                   disabled={loading.action}
                   sx={{ mb: 2 }}
                   size={isMobile ? "small" : "medium"}
-                  multiline
-                  rows={3}
+                  required
                 />
-                
-                <TextField
-                  margin="dense"
-                  label="ID de Proveedor"
-                  type="number"
-                  fullWidth
-                  variant="outlined"
-                  value={selectedClient.supplierId || ''}
-                  onChange={(e) => setSelectedClient({ 
-                    ...selectedClient, 
-                    supplierId: e.target.value ? parseInt(e.target.value) : undefined 
-                  })}
-                  disabled={loading.action}
-                  size={isMobile ? "small" : "medium"}
-                />
-                
+
                 <FormControlLabel
                   control={
                     <Switch
                       checked={selectedClient.status}
-                      onChange={(e) => setSelectedClient({ 
-                        ...selectedClient, 
-                        status: e.target.checked 
-                      })}
+                      onChange={(e) =>
+                        setSelectedClient({
+                          ...selectedClient,
+                          status: e.target.checked,
+                        })
+                      }
                       color="primary"
                     />
                   }
@@ -577,7 +573,7 @@ const ClientsPage: React.FC = () => {
             )}
           </DialogContent>
           <DialogActions>
-            <Button 
+            <Button
               onClick={() => setOpenEditDialog(false)}
               disabled={loading.action}
               size={isMobile ? "small" : "medium"}
@@ -592,7 +588,7 @@ const ClientsPage: React.FC = () => {
               startIcon={loading.action ? <CircularProgress size={20} /> : null}
               size={isMobile ? "small" : "medium"}
             >
-              {loading.action ? 'Guardando...' : 'Guardar'}
+              {loading.action ? "Guardando..." : "Guardar"}
             </Button>
           </DialogActions>
         </Dialog>

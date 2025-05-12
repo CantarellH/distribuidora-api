@@ -9,9 +9,11 @@ import suppliers from "./routes/supplierRoutes";
 import inventory from "./routes/inventoryRoutes";
 import clients from "./routes/clientRoutes";
 import remissions from "./routes/remissionsRoutes";
+import facturacion from "./routes/facturacionRoutes";
 import payments from "./routes/paymentRoutes";
 import { join } from "path";
 import moduleRoutes from "./routes/moduleRoutes";
+
 
 dotenv.config({ path: join(__dirname, "../../../.env") }); 
 
@@ -52,5 +54,6 @@ app.use("/api/inventory", inventory);
 app.use("/api/clients", clients);
 app.use("/api/remissions", remissions);
 app.use("/api/payments", payments);
+app.use("/api/facturacion", facturacion);
 
 export default app;

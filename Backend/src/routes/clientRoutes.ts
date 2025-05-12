@@ -5,6 +5,7 @@ import {
   createClient,
   updateClient,
   deleteClient,
+  validateRfc,
 } from "../controllers/ClientController";
 import { authenticateToken } from "../middlewares/authenticateToken";
 import { checkPermission } from "../middlewares/checkPermission";
@@ -45,5 +46,13 @@ router.delete(
   // checkPermission("delete_clients"),
   deleteClient
 ); 
+
+router.get(
+  "/validate-rfc/:rfc",
+  // authenticateToken,
+  // checkPermission("view_clients"),
+  validateRfc
+);
+
 
 export default router;

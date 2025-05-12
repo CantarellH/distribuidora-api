@@ -19,6 +19,25 @@ export class EggType {
   @Column({ type: "varchar", length: 100 })
   name!: string;
 
+  @Column({ nullable: true })
+    sku?: string;
+
+      // Nuevos campos para facturación
+    @Column({ type: "decimal", precision: 10, scale: 2 })
+    price!: number;
+
+    @Column({ type: "varchar", length: 10 })
+    claveSat!: string; // Ej: "01010101"
+
+    @Column({ type: "varchar", length: 20 })
+    unidadSat!: string; // Ej: "PIEZA"
+
+    @Column({ type: "varchar", length: 10 })
+    claveUnidadSat!: string; // Ej: "H87"
+
+    @Column({ type: "int" })
+    currentStock!: number;
+
   @Column({ type: "varchar", length: 255, nullable: true })
   description?: string;
 
@@ -27,9 +46,6 @@ export class EggType {
 
   @OneToMany(() => RemissionDetail, (remissionDetail: RemissionDetail) => remissionDetail.eggType)
   remissionDetails!: RemissionDetail[];
-
-  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
-  currentStock: number = 0;
 
   @OneToMany(() => InventoryMovement, (movement: InventoryMovement) => movement.eggType)
   movements!: InventoryMovement[];

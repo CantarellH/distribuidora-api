@@ -38,11 +38,14 @@ export class RemissionDetail {
   @Column({ type: "boolean", default: false })
   isByBox!: boolean; // Si es por caja (`true`) o tarima (`false`)
 
+  @Column({ type: "decimal", precision: 10, scale: 2 })
+    pricePerKilo!: number; // Precio específico de la remisión
+
+    @Column({ type: "varchar", length: 10, nullable: true })
+    claveSatSnapshot?: string; // Copia de la clave SAT al momento de la remisión
+
   @OneToMany(() => BoxWeight, (boxWeight) => boxWeight.remissionDetail, {
     cascade: true,
   })
   boxWeights!: BoxWeight[]; // Pesos individuales por caja
- 
-  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
-  pricePerKilo!: number; // Precio por kilo para calcular el costo total
 }

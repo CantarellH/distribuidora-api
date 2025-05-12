@@ -2,24 +2,58 @@ import { Request, Response } from "express";
 import { AppDataSource } from "../config/data-source";
 import { Client } from "../models/Client";
 
+
+interface ClientUpdateFields {
+  rfc?: string;
+  emailFiscal?: string;
+  regimenFiscal?: string;
+  calle?: string;
+  numeroExterior?: string;
+  numeroInterior?: string;
+  colonia?: string;
+  codigoPostal?: string;
+  alcaldiaMunicipio?: string;
+  estado?: string;
+  pais?: string;
+}
+
 export const createClient = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const { name, contact_info } = req.body;
+    const { 
+      name, 
+      contact_info,
+      // Nuevos campos
+      rfc,
+      emailFiscal,
+      regimenFiscal,
+      calle,
+      numeroExterior,
+      numeroInterior,
+      colonia,
+      codigoPostal,
+      alcaldiaMunicipio,
+      estado,
+      pais
+    } = req.body;
 
+    // Validación básica mejorada
     if (!name || !contact_info) {
-      res
-        .status(400)
-        .json({
-          error: "El nombre y la información de contacto son obligatorios.",
-        });
+      res.status(400).json({
+        error: "El nombre y la información de contacto son obligatorios.",
+      });
+      return;
+    }
+
+    // Validación de RFC si se proporciona
+    if (rfc && !/^[A-Z&Ñ]{3,4}\d{6}[A-V1-9][0-9A-Z]([0-9A])?$/.test(rfc)) {
+      res.status(400).json({ error: "El RFC proporcionado no es válido." });
       return;
     }
 
     const clientRepository = AppDataSource.getRepository(Client);
-
     
     const existingClient = await clientRepository.findOne({
       where: [{ name }, { contact_info }],
@@ -36,10 +70,21 @@ export const createClient = async (
       name,
       contact_info,
       status: true,
+      // Nuevos campos
+      rfc,
+      emailFiscal,
+      regimenFiscal,
+      calle,
+      numeroExterior,
+      numeroInterior,
+      colonia,
+      codigoPostal,
+      alcaldiaMunicipio,
+      estado,
+      pais: pais || 'México' // Valor por defecto
     });
 
     const savedClient = await clientRepository.save(newClient);
-
     res.status(201).json(savedClient);
   } catch (error) {
     console.error(error);
@@ -50,43 +95,35 @@ export const createClient = async (
 
 export const getClients = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, status, startDate, endDate } = req.query;
+    const { 
+      name, 
+      status, 
+      startDate, 
+      endDate,
+      rfc, // Nuevo filtro
+      codigoPostal // Nuevo filtro
+    } = req.query;
 
     const clientRepository = AppDataSource.getRepository(Client);
-
-    // Crear consulta básica
     const query = clientRepository.createQueryBuilder("client");
 
-    // Filtro por nombre (búsqueda parcial con ILIKE para insensibilidad de mayúsculas)
-    if (name) {
-      query.andWhere("client.name ILIKE :name", { name: `%${name}%` });
-    }
-
-    // Filtro por estado
+    // Filtros existentes
+    if (name) query.andWhere("client.name ILIKE :name", { name: `%${name}%` });
     if (status !== undefined) {
-      const statusBoolean = status === "true";
-      query.andWhere("client.status = :status", { status: statusBoolean });
+      query.andWhere("client.status = :status", { status: status === "true" });
     }
-
-    // Filtro por rango de fechas de creación
     if (startDate && endDate) {
-      const parsedStartDate = new Date(startDate as string);
-      const parsedEndDate = new Date(endDate as string);
-
-      if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
-        res.status(400).json({ error: "Fechas inválidas." });
-        return;
-      }
-
       query.andWhere("client.created_at BETWEEN :startDate AND :endDate", {
-        startDate: parsedStartDate.toISOString(),
-        endDate: parsedEndDate.toISOString(),
+        startDate: new Date(startDate as string).toISOString(),
+        endDate: new Date(endDate as string).toISOString()
       });
     }
 
-    // Ejecutar consulta
-    const clients = await query.getMany();
+    // Nuevos filtros
+    if (rfc) query.andWhere("client.rfc = :rfc", { rfc });
+    if (codigoPostal) query.andWhere("client.codigoPostal = :codigoPostal", { codigoPostal });
 
+    const clients = await query.getMany();
     res.status(200).json(clients);
   } catch (error) {
     console.error("Error en la búsqueda de clientes:", error);
@@ -101,64 +138,101 @@ export const getClientById = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-
-    const clientRepository = AppDataSource.getRepository(Client);
-
-    const client = await clientRepository.findOne({
-      where: { id: parseInt(id, 10), status: true },
+    const client = await AppDataSource.getRepository(Client).findOne({
+      where: { id: parseInt(id, 10) },
+      relations: ['remissions'] // Incluye remisiones relacionadas
     });
 
     if (!client) {
-       res.status(404).json({ error: "Cliente no encontrado." });
+      res.status(404).json({ error: "Cliente no encontrado." });
+      return;
     }
 
-     res.status(200).json(client);
+    res.status(200).json({
+      ...client,
+      direccionCompleta: client.getDireccionCompleta() // Método del modelo
+    });
   } catch (error) {
     console.error(error);
-     res.status(500).json({ error: "Error interno del servidor." });
+    res.status(500).json({ error: "Error interno del servidor." });
   }
 };
 
 export const updateClient = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const clientRepository = AppDataSource.getRepository(Client);
-
+  
   try {
-    const client = await clientRepository.findOneBy({ id: parseInt(id, 10) });
+    const camposActualizables: ClientUpdateFields = {
+      rfc: req.body.rfc,
+      emailFiscal: req.body.emailFiscal,
+      // ... otros campos
+    };
+
+    const client = await AppDataSource.getRepository(Client).findOneBy({ 
+      id: parseInt(id, 10) 
+    });
 
     if (!client) {
       res.status(404).json({ error: "El cliente no existe." });
-      return; // Detener la ejecución si no se encuentra el cliente
+      return;
     }
 
-    // Actualizar los campos del cliente
-    client.name = req.body.name ?? client.name;
-    client.contact_info = req.body.contact_info ?? client.contact_info;
+    // Actualización segura con tipos
+    Object.entries(camposActualizables).forEach(([key, value]) => {
+      if (value !== undefined) 
+        client[key as keyof ClientUpdateFields] = value;
+    });
 
-    const updatedClient = await clientRepository.save(client);
-    res.status(200).json(updatedClient);
+    await AppDataSource.getRepository(Client).save(client);
+    res.status(200).json(client);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error al actualizar el cliente." });
+    // Manejo de errores
   }
 };
 
+
+
 export const deleteClient = async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
-    const clientRepository = AppDataSource.getRepository(Client);
+  const { id } = req.params;
   
-    try {
-      const client = await clientRepository.findOneBy({ id: parseInt(id, 10) });
-  
-      if (!client) {
-        res.status(404).json({ error: "El cliente no existe." });
-        return;
-      }
-  
-      await clientRepository.remove(client);
-      res.status(200).json({ message: "Cliente eliminado exitosamente." });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Error al eliminar el cliente." });
+  try {
+    const client = await AppDataSource.getRepository(Client).findOne({
+      where: { id: parseInt(id, 10) },
+      relations: ['remissions']
+    });
+
+    if (!client) {
+      res.status(404).json({ error: "El cliente no existe." });
+      return;
     }
-  };
+
+    // Verificación segura con optional chaining
+    const tieneFacturas = client.remissions?.some(r => r.cfdiFolio !== null) ?? false;
+    
+    if (tieneFacturas) {
+      res.status(400).json({ 
+        error: "No se puede eliminar, el cliente tiene facturas generadas." 
+      });
+      return;
+    }
+
+    await AppDataSource.getRepository(Client).remove(client);
+    res.status(200).json({ message: "Cliente eliminado exitosamente." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al eliminar el cliente." });
+  }
+};
+
+
+export const validateRfc = async (req: Request, res: Response): Promise<void> => {
+  const { rfc } = req.body;
+  
+  if (!rfc) {
+    res.status(400).json({ error: "RFC es requerido." });
+    return;
+  }
+
+  const isValid = /^[A-Z&Ñ]{3,4}\d{6}[A-V1-9][0-9A-Z]([0-9A])?$/.test(rfc);
+  res.status(200).json({ valid: isValid });
+};

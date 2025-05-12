@@ -27,7 +27,6 @@ router.post(
   // checkPermission("create_remission"),
   createRemissionDetail
 );
-
 router.get(
   "/search",
   // authenticateToken,

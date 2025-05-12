@@ -7,6 +7,7 @@ import { EggType } from "../models/EggType";
 import { Client } from "../models/Client";
 import { PaymentDetail } from "../models/PaymentDetail";
 import { Supplier } from "../models/Supplier";
+import { FacturacionError } from "../errors/FacturacionError";
 
 export const createRemission = async (
   req: Request,
@@ -15,17 +16,9 @@ export const createRemission = async (
   try {
     const { date, clientId, details } = req.body;
 
-    // Validaciones básicas
     if (!date || !clientId) {
       res.status(400).json({
         error: "Los campos 'date' y 'clientId' son obligatorios.",
-      });
-      return;
-    }
-
-    if (!details || !Array.isArray(details) || details.length === 0) {
-      res.status(400).json({
-        error: "Debe incluir al menos un detalle de remisión.",
       });
       return;
     }
@@ -53,7 +46,6 @@ export const createRemission = async (
     const remissionDetailRepository = AppDataSource.getRepository(RemissionDetail);
     const eggTypeRepository = AppDataSource.getRepository(EggType);
 
-    // Procesar detalles
     for (const detail of details) {
       const {
         eggTypeId,
@@ -85,7 +77,6 @@ export const createRemission = async (
         continue;
       }
 
-      // Validación de stock
       if (eggType.currentStock < boxCount) {
         errors.push(`Stock insuficiente para ${eggType.name}. Disponible: ${eggType.currentStock}, Solicitado: ${boxCount}`);
         continue;
@@ -282,17 +273,18 @@ export const createRemissionDetail = async (
       isByBox,
       weightTotal: calculatedWeightTotal,
       estimatedWeightPerBox,
-      pricePerKilo, // Precio específico para este detalle
-      claveSatSnapshot: eggType.claveSat // Guardamos copia del SAT
+      pricePerKilo,
+      claveSatSnapshot: eggType.claveSat
     });
 
-    const savedRemissionDetail = await remissionDetailRepository.save(remissionDetail);
+    const savedRemissionDetail = await remissionDetailRepository.save(
+      remissionDetail
+    );
 
     // Actualizar stock
     eggType.currentStock -= boxCount;
     await AppDataSource.getRepository(EggType).save(eggType);
 
-    // Procesar pesos individuales si existen
     if (isByBox && weights) {
       for (const weight of weights) {
         const boxWeight = boxWeightRepository.create({
@@ -319,7 +311,116 @@ export const createRemissionDetail = async (
   }
 };
 
-// ... (Los demás métodos getRemissions, getRemissionById, filterRemissions se mantienen igual)
+export const getRemissions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const remissions = await AppDataSource.getRepository(Remission).find({
+      relations: ["client", "details", "paymentDetails"],
+    });
+    res.status(200).json(remissions);
+  } catch (error) {
+    console.error("Error al obtener las remisiones:", error);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
+};
+
+export const getRemissionDetail = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const remissionDetail = await AppDataSource.getRepository(
+      RemissionDetail
+    ).findOne({
+      where: { id: parseInt(id, 10) },
+      relations: ["boxWeights", "eggType", "supplier", "remission"],
+    });
+
+    if (!remissionDetail) {
+      res.status(404).json({ error: "Detalle de remisión no encontrado." });
+      return;
+    }
+
+    res.status(200).json(remissionDetail);
+  } catch (error) {
+    console.error("Error al obtener el detalle de remisión:", error);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
+};
+
+export const getRemissionById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const remissionRepository = AppDataSource.getRepository(Remission);
+    const remission = await remissionRepository.findOne({
+      where: { id: parseInt(id, 10) },
+      relations: [
+        "client",
+        "details",
+        "paymentDetails",
+        "paymentDetails.payment",
+      ],
+    });
+
+    if (!remission) {
+      res.status(404).json({ error: "Remisión no encontrada." });
+      return;
+    }
+
+    // Enriquecer respuesta con datos de precios
+    const response = {
+      ...remission,
+      details: remission.details.map(d => ({
+        ...d,
+        importe: d.weightTotal * d.pricePerKilo,
+        precioUnitario: d.pricePerKilo
+      }))
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Error al obtener la remisión:", error);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
+};
+
+export const filterRemissions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { startDate, endDate, clientId } = req.query;
+    const remissionRepository = AppDataSource.getRepository(Remission);
+    const query = remissionRepository
+      .createQueryBuilder("remission")
+      .leftJoinAndSelect("remission.client", "client")
+      .leftJoinAndSelect("remission.details", "details");
+
+    if (startDate && endDate) {
+      query.andWhere("remission.date BETWEEN :startDate AND :endDate", {
+        startDate,
+        endDate,
+      });
+    }
+
+    if (clientId) {
+      query.andWhere("client.id = :clientId", { clientId });
+    }
+
+    const remissions = await query.getMany();
+    res.json(remissions);
+  } catch (error) {
+    console.error("Error filtering remissions:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 export const updateRemissionDetail = async (
   req: Request,
@@ -433,10 +534,95 @@ export const updateRemissionDetail = async (
   }
 };
 
-// ... (Los demás métodos updateRemission, deleteRemission se mantienen igual)
+export const updateRemission = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const { id } = req.params;
+  const { date, clientId } = req.body;
 
-// Nuevo endpoint para obtener precios actuales
-export const getPreciosActuales = async (req: Request, res: Response) => {
+  try {
+    const remissionRepository = AppDataSource.getRepository(Remission);
+    const remission = await remissionRepository.findOne({
+      where: { id: parseInt(id, 10) },
+      relations: ["details"],
+    });
+
+    if (!remission) {
+      res.status(404).json({ error: "Remisión no encontrada." });
+      return;
+    }
+
+    remission.date = date || remission.date;
+
+    if (clientId) {
+      const client = await AppDataSource.getRepository(Client).findOneBy({
+        id: clientId,
+      });
+      if (!client) {
+        res.status(404).json({ error: "Cliente no encontrado." });
+        return;
+      }
+      remission.client = client;
+    }
+
+    remission.totalCost = remission.details.reduce(
+      (total, detail) => total + detail.weightTotal * detail.pricePerKilo,
+      0
+    );
+    await remissionRepository.save(remission);
+
+    res.status(200).json({
+      message: "Remisión actualizada con éxito.",
+      remission,
+    });
+  } catch (error) {
+    console.error("Error al actualizar la remisión:", error);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
+};
+
+export const deleteRemission = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const remissionRepository = AppDataSource.getRepository(Remission);
+    const remission = await remissionRepository.findOne({
+      where: { id: parseInt(id, 10) },
+      relations: ["paymentDetails", "details", "details.eggType"],
+    });
+
+    if (!remission) {
+      res.status(404).json({ error: "Remisión no encontrada." });
+      return;
+    }
+
+    // Revertir stock
+    const eggTypeRepository = AppDataSource.getRepository(EggType);
+    for (const detail of remission.details) {
+      const eggType = await eggTypeRepository.findOneBy({ id: detail.eggType.id });
+      if (eggType) {
+        eggType.currentStock += detail.boxCount;
+        await eggTypeRepository.save(eggType);
+      }
+    }
+
+    await AppDataSource.getRepository(PaymentDetail).delete({
+      remission: { id: remission.id },
+    });
+
+    await remissionRepository.remove(remission);
+
+    res.status(200).json({ message: "Remisión eliminada con éxito." });
+  } catch (error) {
+    console.error("Error al eliminar la remisión:", error);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
+};
+
+export const getPreciosActuales = async (req: Request, res: Response): Promise<void> => {
   try {
     const eggTypes = await AppDataSource.getRepository(EggType)
       .createQueryBuilder("eggType")
@@ -444,7 +630,6 @@ export const getPreciosActuales = async (req: Request, res: Response) => {
         "eggType.id",
         "eggType.name",
         "eggType.sku",
-        "eggType.price",
         "eggType.claveSat",
         "eggType.unidadSat",
         "eggType.currentStock"
@@ -455,7 +640,6 @@ export const getPreciosActuales = async (req: Request, res: Response) => {
       id: tipo.id,
       nombre: tipo.name,
       sku: tipo.sku,
-      precioActual: tipo.price,
       claveSat: tipo.claveSat,
       unidad: tipo.unidadSat,
       stock: tipo.currentStock

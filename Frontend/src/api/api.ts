@@ -1,5 +1,41 @@
 import axios from "axios";
 
+// Interfaces para tipos complejos
+interface ClientUpdateFields {
+  rfc?: string;
+  emailFiscal?: string;
+  regimenFiscal?: string;
+  calle?: string;
+  numeroExterior?: string;
+  numeroInterior?: string;
+  colonia?: string;
+  codigoPostal?: string;
+  alcaldiaMunicipio?: string;
+  estado?: string;
+  pais?: string;
+}
+
+interface RemissionDetail {
+  eggTypeId: number;
+  supplierId: number;
+  boxCount: number;
+  weights?: number[];
+  weightTotal?: number;
+  pricePerKilo: number;
+  claveSatSnapshot?: string;
+  unidadSat?: string;
+}
+
+interface InventoryMovement {
+  eggTypeId: number;
+  movementType: string;
+  quantity: number;
+  referenceId?: number;
+  currentStock: number;
+  details: string;
+}
+
+// Configuración base de axios
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
   headers: {
@@ -17,88 +53,251 @@ api.interceptors.request.use((config) => {
 });
 
 // Manejo centralizado de errores
-/*nst handleApiError = (error: unknown) => {
-  if (axios.isAxiosError(error) && error.response) {
-    throw new Error(error.response.data.message || error.response.data.error || "Error en la solicitud");
-  } else {
-    throw new Error("Error de conexión con el servidor");
+const handleApiError = (error: unknown) => {
+  if (axios.isAxiosError(error)) {
+    if (error.response) {
+      const message = error.response.data?.message || 
+                     error.response.data?.error || 
+                     "Error en la solicitud";
+      throw new Error(message);
+    } else if (error.request) {
+      throw new Error("No se recibió respuesta del servidor");
+    }
   }
-};*/
+  throw new Error("Error desconocido");
+};
 
 // Operaciones de autenticación
 export const authApi = {
-  login: (data: { username: string; password: string }) =>
-    api.post("/auth/login", data),
-  me: () => api.get("/auth/me"),
-  refreshToken: () => api.post("/auth/refresh-token"),
+  login: async (data: { username: string; password: string }) => {
+    try {
+      return await api.post("/auth/login", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  me: async () => {
+    try {
+      return await api.get("/auth/me");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  refreshToken: async () => {
+    try {
+      return await api.post("/auth/refresh-token");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 // Operaciones para Usuarios (Users)
 export const userApi = {
-  getAll: () => api.get("/users"),
-  create: (data: { username: string; password: string; role: number; status?: boolean }) =>
-    api.post("/users", data),
-  update: (id: number, data: { username?: string; role?: number; status?: boolean }) =>
-    api.put(`/users/${id}`, data),
-  delete: (id: number) => api.delete(`/users/${id}`),
+  getAll: async () => {
+    try {
+      return await api.get("/users");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  create: async (data: { username: string; password: string; role: number; status?: boolean }) => {
+    try {
+      return await api.post("/users", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  update: async (id: number, data: { username?: string; role?: number; status?: boolean }) => {
+    try {
+      return await api.put(`/users/${id}`, data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  delete: async (id: number) => {
+    try {
+      return await api.delete(`/users/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 // Operaciones para Roles (Roles)
 export const roleApi = {
-  getAll: () => api.get("/roles"),
-  create: (data: { name: string; description?: string }) =>
-    api.post("/roles", data),
-  assignPermissions: (roleId: number, permissions: number[]) =>
-    api.post("/roles/assign-permissions", { roleId, permissions }),
-  removePermissions: (roleId: number, permissions: number[]) =>
-    api.post("/roles/remove-permissions", { roleId, permissions }),
-  getPermissions: (userId: number) =>
-    api.get(`/users/${userId}/permissions`),
+  getAll: async () => {
+    try {
+      return await api.get("/roles");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  create: async (data: { name: string; description?: string }) => {
+    try {
+      return await api.post("/roles", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  assignPermissions: async (roleId: number, permissions: number[]) => {
+    try {
+      return await api.post("/roles/assign-permissions", { roleId, permissions });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  removePermissions: async (roleId: number, permissions: number[]) => {
+    try {
+      return await api.post("/roles/remove-permissions", { roleId, permissions });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getPermissions: async (userId: number) => {
+    try {
+      return await api.get(`/users/${userId}/permissions`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 // Operaciones para Permisos (Permissions)
 export const permissionApi = {
-  getAll: () => api.get("/permissions"),
+  getAll: async () => {
+    try {
+      return await api.get("/permissions");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 // Operaciones para Módulos (Modules)
 export const moduleApi = {
-  getAll: () => api.get("/modules"),
-  create: (data: { name: string }) => api.post("/modules", data),
-  assignModules: (roleId: number, modules: number[]) =>
-    api.post("/modules/assign", { roleId, modules }),
-  removeModules: (roleId: number, modules: number[]) =>
-    api.post("/modules/remove", { roleId, modules }),
-  getRoleModules: (roleId: number) => api.get(`/roles/${roleId}/modules`),
-  getUserModules: (userId: number) => api.get(`/users/${userId}/modules`),
+  getAll: async () => {
+    try {
+      return await api.get("/modules");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  create: async (data: { name: string }) => {
+    try {
+      return await api.post("/modules", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  assignModules: async (roleId: number, modules: number[]) => {
+    try {
+      return await api.post("/modules/assign", { roleId, modules });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  removeModules: async (roleId: number, modules: number[]) => {
+    try {
+      return await api.post("/modules/remove", { roleId, modules });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getRoleModules: async (roleId: number) => {
+    try {
+      return await api.get(`/roles/${roleId}/modules`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getUserModules: async (userId: number) => {
+    try {
+      return await api.get(`/users/${userId}/modules`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 // Operaciones para Tipos de Huevo (EggTypes)
 export const eggTypeApi = {
-  getAll: () => api.get("/types"),
-  create: (data: { name: string; description?: string; supplierId?: number }) =>
-    api.post("/types", data),
-  update: (
+  getAll: async () => {
+    try {
+      return await api.get("/types");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  create: async (data: { name: string; description?: string; supplierId?: number }) => {
+    try {
+      return await api.post("/types", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  update: async (
     id: number,
     data: { name?: string; description?: string; supplierId?: number }
-  ) => api.put(`/types/${id}`, data),
-  delete: (id: number) => api.delete(`/types/${id}`),
-  getSuppliers: (eggTypeId: number) => api.get(`/types/${eggTypeId}/suppliers`),
-  getBySupplier: (supplierId: number) => api.get(`/suppliers/${supplierId}/egg-types`),
+  ) => {
+    try {
+      return await api.put(`/types/${id}`, data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  delete: async (id: number) => {
+    try {
+      return await api.delete(`/types/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getSuppliers: async (eggTypeId: number) => {
+    try {
+      return await api.get(`/types/${eggTypeId}/suppliers`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getBySupplier: async (supplierId: number) => {
+    try {
+      return await api.get(`/suppliers/${supplierId}/egg-types`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 // Operaciones para Proveedores (Suppliers)
 export const supplierApi = {
-  getAll: () => api.get("/suppliers"),
-  filter: (params: { name?: string; contact_info?: string }) =>
-    api.get("/suppliers/filter", { params }),
-  create: (data: {
+  getAll: async () => {
+    try {
+      return await api.get("/suppliers");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  filter: async (params: { name?: string; contact_info?: string }) => {
+    try {
+      return await api.get("/suppliers/filter", { params });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  create: async (data: {
     name: string;
     phone_number?: string;
     email?: string;
     address?: string;
-  }) => api.post("/suppliers", data),
-  update: (
+  }) => {
+    try {
+      return await api.post("/suppliers", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  update: async (
     id: number,
     data: {
       name?: string;
@@ -106,43 +305,137 @@ export const supplierApi = {
       email?: string;
       address?: string;
     }
-  ) => api.put(`/suppliers/${id}`, data),
-  delete: (id: number) => api.delete(`/suppliers/${id}`),
+  ) => {
+    try {
+      return await api.put(`/suppliers/${id}`, data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  delete: async (id: number) => {
+    try {
+      return await api.delete(`/suppliers/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 // Operaciones para Clientes (Clients)
 export const clientApi = {
-  getAll: (params?: { name?: string; status?: boolean; startDate?: string; endDate?: string }) =>
-    api.get("/clients", { params }),
-  getById: (id: number) => api.get(`/clients/${id}`),
-  create: (data: { name: string; contact_info: string; status?: boolean }) =>
-    api.post("/clients", data),
-  update: (
+  getAll: async (params?: { name?: string; status?: boolean; startDate?: string; endDate?: string; rfc?: string; codigoPostal?: string }) => {
+    try {
+      return await api.get("/clients", { params });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getById: async (id: number) => {
+    try {
+      return await api.get(`/clients/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  create: async (data: { 
+    name: string; 
+    contact_info: string; 
+    status?: boolean;
+    rfc?: string;
+    emailFiscal?: string;
+    regimenFiscal?: string;
+    direccion?: {
+      calle: string;
+      numeroExterior: string;
+      numeroInterior?: string;
+      colonia: string;
+      codigoPostal: string;
+      alcaldiaMunicipio: string;
+      estado: string;
+      pais?: string;
+    }
+  }) => {
+    try {
+      return await api.post("/clients", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  update: async (
     id: number,
-    data: { name?: string; contact_info?: string; status?: boolean }
-  ) => api.put(`/clients/${id}`, data),
-  delete: (id: number) => api.delete(`/clients/${id}`),
+    data: { 
+      name?: string; 
+      contact_info?: string; 
+      status?: boolean;
+      fiscalData?: ClientUpdateFields;
+    }
+  ) => {
+    try {
+      return await api.put(`/clients/${id}`, data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  delete: async (id: number) => {
+    try {
+      return await api.delete(`/clients/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  validateRfc: async (rfc: string) => {
+    try {
+      return await api.post("/clients/validate-rfc", { rfc });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  updateFiscalData: async (id: number, data: ClientUpdateFields) => {
+    try {
+      return await api.put(`/clients/${id}/fiscal-data`, data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 // Operaciones para Inventario (Inventory)
 export const inventoryApi = {
   // Entradas de inventario
-  getEntries: (params?: {
+  getEntries: async (params?: {
     supplierId?: number;
     eggTypeId?: number;
     startDate?: string;
     endDate?: string;
-  }) => api.get("/inventory/entries", { params }),
-  getEntryById: (id: number) => api.get(`/inventory/entries/${id}`),
-  createEntry: (data: {
+  }) => {
+    try {
+      return await api.get("/inventory/entries", { params });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getEntryById: async (id: number) => {
+    try {
+      return await api.get(`/inventory/entries/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  createEntry: async (data: {
     supplierId: number;
     details: {
       eggTypeId: number;
       boxCount: number;
       weightTotal: number;
     }[];
-  }) => api.post("/inventory/entries", data),
-  updateEntry: (
+  }) => {
+    try {
+      return await api.post("/inventory/entries", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  updateEntry: async (
     id: number,
     data: {
       entryDetails: {
@@ -151,45 +444,113 @@ export const inventoryApi = {
         weightTotal: number;
       }[];
     }
-  ) => api.put(`/inventory/entries/${id}`, data),
-  deleteEntry: (id: number) => api.delete(`/inventory/entries/${id}`),
+  ) => {
+    try {
+      return await api.put(`/inventory/entries/${id}`, data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  deleteEntry: async (id: number) => {
+    try {
+      return await api.delete(`/inventory/entries/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 
   // Stock
-  getCurrentStock: () => api.get("/inventory/stock"),
-  getStockByEggType: (id: number) => api.get(`/inventory/stock/${id}`),
-  adjustStock: (data: { eggTypeId: number; quantity: number; reason: string }) =>
-    api.post("/inventory/adjust-stock", data),
+  getCurrentStock: async () => {
+    try {
+      return await api.get("/inventory/stock");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getStockByEggType: async (id: number) => {
+    try {
+      return await api.get(`/inventory/stock/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  adjustStock: async (data: { eggTypeId: number; quantity: number; reason: string }) => {
+    try {
+      return await api.post("/inventory/adjust-stock", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 
   // Movimientos
-  getMovements: (params?: {
+  getMovements: async (params?: {
     eggTypeId?: number;
     startDate?: string;
     endDate?: string;
     movementType?: string;
-  }) => api.get("/inventory/movements", { params }),
+  }) => {
+    try {
+      return await api.get("/inventory/movements", { params });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getMovementTypes: async () => {
+    try {
+      return await api.get("/inventory/movement-types");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 // Operaciones para Remisiones (Remissions)
 export const remissionApi = {
-  getAll: (params?: { clientId?: number; startDate?: string; endDate?: string }) =>
-    api.get("/remissions", { params }),
-  getById: (id: number) => api.get(`/remissions/${id}`),
-  create: (data: { date: string; clientId: number; details: {
-    eggTypeId: number;
-    supplierId: number;
-    boxCount: number;
-    weights?: number[];
-    weightTotal?: number;
-    pricePerKilo: number;
-  }[] }) => api.post("/remissions", data),
-  update: (
+  getAll: async (params?: { clientId?: number; startDate?: string; endDate?: string }) => {
+    try {
+      return await api.get("/remissions", { params });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getById: async (id: number) => {
+    try {
+      return await api.get(`/remissions/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  create: async (data: { 
+    date: string; 
+    clientId: number; 
+    details: RemissionDetail[] 
+  }) => {
+    try {
+      return await api.post("/remissions", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  update: async (
     id: number,
     data: { date?: string; clientId?: number }
-  ) => api.put(`/remissions/${id}`, data),
-  delete: (id: number) => api.delete(`/remissions/${id}`),
+  ) => {
+    try {
+      return await api.put(`/remissions/${id}`, data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  delete: async (id: number) => {
+    try {
+      return await api.delete(`/remissions/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 
   // Detalles de remisión
-  createDetail: (data: {
+  createDetail: async (data: {
     remissionId: number;
     eggTypeId: number;
     supplierId: number;
@@ -198,9 +559,22 @@ export const remissionApi = {
     weights?: number[];
     weightTotal?: number;
     pricePerKilo: number;
-  }) => api.post("/remissions/details", data),
-  getDetail: (id: number) => api.get(`/remissions/details/${id}`),
-  updateDetail: (
+    claveSatSnapshot?: string;
+  }) => {
+    try {
+      return await api.post("/remissions/details", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getDetail: async (id: number) => {
+    try {
+      return await api.get(`/remissions/details/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  updateDetail: async (
     id: number,
     data: {
       boxCount?: number;
@@ -209,33 +583,87 @@ export const remissionApi = {
       estimatedWeightPerBox?: number;
       pricePerKilo?: number;
     }
-  ) => api.put(`/remissions/details/${id}`, data),
+  ) => {
+    try {
+      return await api.put(`/remissions/details/${id}`, data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getCurrentPrices: async () => {
+    try {
+      return await api.get("/remissions/prices");
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 // Operaciones para Pagos (Payments)
 export const paymentApi = {
-  getAll: (params?: {
+  getAll: async (params?: {
     clientId?: number;
     startDate?: string;
     endDate?: string;
     method?: string;
     minAmount?: number;
     maxAmount?: number;
-  }) => api.get("/payments", { params }),
-  getById: (id: number) => api.get(`/payments/${id}`),
-  create: (data: {
+  }) => {
+    try {
+      return await api.get("/payments", { params });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  getById: async (id: number) => {
+    try {
+      return await api.get(`/payments/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  create: async (data: {
     clientId: number;
     paymentDetails: {
       remissionId: number;
       amountAssigned: number;
     }[];
     method: string;
-  }) => api.post("/payments", data),
-  update: (
+  }) => {
+    try {
+      return await api.post("/payments", data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  update: async (
     id: number,
     data: { amount?: number; method?: string }
-  ) => api.put(`/payments/${id}`, data),
-  delete: (id: number) => api.delete(`/payments/${id}`),
+  ) => {
+    try {
+      return await api.put(`/payments/${id}`, data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  delete: async (id: number) => {
+    try {
+      return await api.delete(`/payments/${id}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+};
+
+// Operaciones para Facturación (Billing)
+export const billingApi = {
+  generateInvoice: async (remissionId: number) => {
+    try {
+      return await api.post("/billing/generate", { remissionId });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
 };
 
 export default api;

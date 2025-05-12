@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { 
-  Typography, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  Button, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  TextField, 
+import {
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
   CircularProgress,
   Alert,
   IconButton,
@@ -23,7 +23,7 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
 } from "@mui/material";
 import { Add, Edit, Delete } from "@mui/icons-material";
 import DashboardLayout from "../components/DashboardLayout";
@@ -42,6 +42,9 @@ interface EggTypeSupplier {
 interface EggType {
   id: number;
   name: string;
+  claveSat: string;
+  unidadSat: string;
+  claveUnidadSat: string;
   description: string;
   eggTypeSuppliers: EggTypeSupplier[];
 }
@@ -51,7 +54,7 @@ const EggTypesPage: React.FC = () => {
   const [loading, setLoading] = useState({
     list: true,
     action: false,
-    suppliers: false
+    suppliers: false,
   });
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
@@ -59,7 +62,10 @@ const EggTypesPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    supplierId: undefined as number | undefined
+    supplierId: undefined as number | undefined,
+    claveSat: "", // Nuevo campo requerido
+    unidadSat: "",
+    claveUnidadSat: "" // Nuevo campo requerido
   });
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
@@ -69,111 +75,135 @@ const EggTypesPage: React.FC = () => {
   }, []);
 
   const fetchEggTypes = async () => {
-    try {
-      setLoading(prev => ({...prev, list: true}));
-      setError(null);
-      const response = await eggTypeApi.getAll();
+  try {
+    setLoading((prev) => ({ ...prev, list: true }));
+    setError(null);
+    const response = await eggTypeApi.getAll();
+    if (response && response.data) {
       setEggTypes(response.data);
-    } catch (err: unknown) {
-      console.error("Error fetching egg types:", err);
-      setError(err instanceof Error ? err.message : "Error al cargar los tipos de huevo");
-    } finally {
-      setLoading(prev => ({...prev, list: false}));
     }
-  };
+  } catch (err: unknown) {
+    console.error("Error fetching egg types:", err);
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Error al cargar los tipos de huevo"
+    );
+  } finally {
+    setLoading((prev) => ({ ...prev, list: false }));
+  }
+};
 
-  const fetchSuppliers = async () => {
-    try {
-      setLoading(prev => ({...prev, suppliers: true}));
-      const response  = await supplierApi.getAll();
+const fetchSuppliers = async () => {
+  try {
+    setLoading((prev) => ({ ...prev, suppliers: true }));
+    const response = await supplierApi.getAll();
+    if (response && response.data) {
       setSuppliers(response.data);
-    } catch (err: unknown) {
-      console.error("Error fetching suppliers:", err);
-    } finally {
-      setLoading(prev => ({...prev, suppliers: false}));
     }
-  };
+  } catch (err: unknown) {
+    console.error("Error fetching suppliers:", err);
+  } finally {
+    setLoading((prev) => ({ ...prev, suppliers: false }));
+  }
+};
 
   const handleOpenDialog = (eggType: EggType | null) => {
-    setCurrentEggType(eggType);
-    if (eggType) {
-      // Tomar el primer proveedor si existe (según tu backend actual)
-      const primarySupplier = eggType.eggTypeSuppliers[0]?.supplier;
-      setFormData({
-        name: eggType.name,
-        description: eggType.description || "",
-        supplierId: primarySupplier?.id
-      });
-    } else {
-      setFormData({
-        name: "",
-        description: "",
-        supplierId: undefined
-      });
-    }
-    setOpenDialog(true);
-  };
+  setCurrentEggType(eggType);
+  if (eggType) {
+    const primarySupplier = eggType.eggTypeSuppliers[0]?.supplier;
+    setFormData({
+      name: eggType.name,
+      description: eggType.description || "",
+      supplierId: primarySupplier?.id,
+      claveSat: eggType.claveSat || "", // Asegurar que existe en el tipo EggType
+      unidadSat: eggType.unidadSat || "",
+      claveUnidadSat: eggType.claveUnidadSat || ""
+    });
+  } else {
+    setFormData({
+      name: "",
+      description: "",
+      supplierId: undefined,
+      claveSat: "",
+      unidadSat: "",
+      claveUnidadSat: ""
+    });
+  }
+  setOpenDialog(true);
+};
 
   const handleSubmit = async () => {
-    if (!formData.name) {
-      setError("Nombre es requerido");
-      return;
+  if (!formData.name || !formData.claveSat) { // Validar campos requeridos
+    setError("Nombre y Clave SAT son requeridos");
+    return;
+  }
+
+  try {
+    setLoading((prev) => ({ ...prev, action: true }));
+    setError(null);
+
+    const payload = {
+      name: formData.name,
+      description: formData.description,
+      supplierId: formData.supplierId,
+      claveSat: formData.claveSat,
+      unidadSat: formData.unidadSat,
+      claveUnidadSat: formData.claveUnidadSat
+    };
+
+    if (currentEggType) {
+      await eggTypeApi.update(currentEggType.id, payload);
+    } else {
+      await eggTypeApi.create(payload);
     }
 
-    try {
-      setLoading(prev => ({...prev, action: true}));
-      setError(null);
-
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        supplierId: formData.supplierId
-      };
-
-      if (currentEggType) {
-        await eggTypeApi.update(currentEggType.id, payload);
-      } else {
-        await eggTypeApi.create(payload);
-      }
-
-      await fetchEggTypes();
-      setOpenDialog(false);
-    } catch (err: unknown) {
-      console.error("Error saving egg type:", err);
-      setError(err instanceof Error ? err.message : "Error al guardar el tipo de huevo");
-    } finally {
-      setLoading(prev => ({...prev, action: false}));
-    }
-  };
+    await fetchEggTypes();
+    setOpenDialog(false);
+  } catch (err: unknown) {
+    console.error("Error saving egg type:", err);
+    setError(
+      err instanceof Error ? err.message : "Error al guardar el tipo de huevo"
+    );
+  } finally {
+    setLoading((prev) => ({ ...prev, action: false }));
+  }
+};
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("¿Está seguro de eliminar este tipo de huevo?")) return;
 
     try {
-      setLoading(prev => ({...prev, action: true}));
+      setLoading((prev) => ({ ...prev, action: true }));
       await eggTypeApi.delete(id);
       await fetchEggTypes();
     } catch (err: unknown) {
       console.error("Error deleting egg type:", err);
-      setError(err instanceof Error ? err.message : "Error al eliminar el tipo de huevo");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Error al eliminar el tipo de huevo"
+      );
     } finally {
-      setLoading(prev => ({...prev, action: false}));
+      setLoading((prev) => ({ ...prev, action: false }));
     }
   };
 
   return (
     <DashboardLayout>
       <Box sx={{ p: 3 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 3 
-        }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Typography variant="h4" gutterBottom>
             Catálogo de Tipos de Huevo
           </Typography>
-          
+
           <Button
             variant="contained"
             color="primary"
@@ -192,7 +222,7 @@ const EggTypesPage: React.FC = () => {
         )}
 
         {loading.list ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
             <CircularProgress />
           </Box>
         ) : (
@@ -215,26 +245,26 @@ const EggTypesPage: React.FC = () => {
                     <TableCell>
                       <Tooltip title={eggType.description || "Sin descripción"}>
                         <span>
-                          {eggType.description 
-                            ? eggType.description.length > 30 
-                              ? `${eggType.description.substring(0, 30)}...` 
+                          {eggType.description
+                            ? eggType.description.length > 30
+                              ? `${eggType.description.substring(0, 30)}...`
                               : eggType.description
                             : "-"}
                         </span>
                       </Tooltip>
                     </TableCell>
                     <TableCell>
-                      {eggType.eggTypeSuppliers.map(ets => (
-                        <Chip 
-                          key={ets.id} 
-                          label={ets.supplier.name} 
+                      {eggType.eggTypeSuppliers.map((ets) => (
+                        <Chip
+                          key={ets.id}
+                          label={ets.supplier.name}
                           sx={{ mr: 1, mb: 1 }}
                         />
                       ))}
                     </TableCell>
                     <TableCell>
                       <Tooltip title="Editar">
-                        <IconButton 
+                        <IconButton
                           onClick={() => handleOpenDialog(eggType)}
                           color="primary"
                           disabled={loading.action}
@@ -243,7 +273,7 @@ const EggTypesPage: React.FC = () => {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
-                        <IconButton 
+                        <IconButton
                           onClick={() => handleDelete(eggType.id)}
                           color="error"
                           disabled={loading.action}
@@ -259,8 +289,8 @@ const EggTypesPage: React.FC = () => {
           </TableContainer>
         )}
 
-        <Dialog 
-          open={openDialog} 
+        <Dialog
+          open={openDialog}
           onClose={() => setOpenDialog(false)}
           fullWidth
           maxWidth="sm"
@@ -274,11 +304,45 @@ const EggTypesPage: React.FC = () => {
               fullWidth
               margin="normal"
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               required
               disabled={loading.action}
             />
-            
+            <TextField
+              label="Clave SAT"
+              fullWidth
+              margin="normal"
+              value={formData.claveSat}
+              onChange={(e) =>
+                setFormData({ ...formData, claveSat: e.target.value })
+              }
+              required
+              disabled={loading.action}
+            />
+            <TextField
+              label="Unidad SAT"
+              fullWidth
+              margin="normal"
+              value={formData.unidadSat}
+              onChange={(e) =>
+                setFormData({ ...formData, unidadSat: e.target.value })
+              }
+              required
+              disabled={loading.action}
+            />
+            <TextField
+              label="Clave Unidad SAT"
+              fullWidth
+              margin="normal"
+              value={formData.claveUnidadSat}
+              onChange={(e) =>
+                setFormData({ ...formData, claveUnidadSat: e.target.value })
+              }
+              required
+              disabled={loading.action}
+            />
             <TextField
               label="Descripción"
               fullWidth
@@ -286,18 +350,24 @@ const EggTypesPage: React.FC = () => {
               multiline
               rows={3}
               value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               disabled={loading.action}
             />
-            
+
             <FormControl fullWidth margin="normal">
               <InputLabel>Proveedor</InputLabel>
               <Select
-                value={formData.supplierId || ''}
-                onChange={(e) => setFormData({
-                  ...formData, 
-                  supplierId: e.target.value ? Number(e.target.value) : undefined
-                })}
+                value={formData.supplierId || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    supplierId: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
+                  })
+                }
                 label="Proveedor"
                 disabled={loading.action || loading.suppliers}
               >
@@ -313,7 +383,7 @@ const EggTypesPage: React.FC = () => {
             </FormControl>
           </DialogContent>
           <DialogActions>
-            <Button 
+            <Button
               onClick={() => setOpenDialog(false)}
               disabled={loading.action}
             >

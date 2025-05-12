@@ -53,10 +53,25 @@ interface Client {
   created_at: string;
 }
 
+interface Direccion {
+  calle: string;
+  numeroExterior: string;
+  numeroInterior?: string;
+  colonia: string;
+  codigoPostal: string;
+  alcaldiaMunicipio: string;
+  estado: string;
+  pais?: string;
+}
+
 interface ClientFormData {
   name: string;
   contact_info: string;
   status: boolean;
+  rfc?: string;
+  emailFiscal?: string;
+  regimenFiscal?: string;
+  direccion?: Direccion;
 }
 
 const ClientsPage: React.FC = () => {
@@ -71,7 +86,18 @@ const ClientsPage: React.FC = () => {
     name: "",
     contact_info: "",
     status: true,
+    direccion: {
+      calle: "",
+      numeroExterior: "",
+      numeroInterior: "",
+      colonia: "",
+      codigoPostal: "",
+      alcaldiaMunicipio: "",
+      estado: "",
+      pais: "México",
+    },
   });
+
   const [loading, setLoading] = useState({
     clients: false,
     action: false,
@@ -88,25 +114,45 @@ const ClientsPage: React.FC = () => {
   }, []);
 
   const fetchClients = async () => {
-  try {
-    setLoading((prev) => ({ ...prev, clients: true }));
-    setError(null);
+    try {
+      setLoading((prev) => ({ ...prev, clients: true }));
+      setError(null);
 
-    const response = await clientApi.getAll();
-    setClients(response.data); // Asume que los datos están en response.data
-  } catch (err: unknown) {
-    console.error("Error fetching clients:", err);
-    setError(
-      err instanceof Error ? err.message : "Error al cargar los clientes"
-    );
-  } finally {
-    setLoading((prev) => ({ ...prev, clients: false }));
-  }
-};
-
+      const response = await clientApi.getAll();
+      if (response && response.data) {
+        setClients(response.data);
+      } else {
+        setError("No se recibieron datos de clientes");
+        setClients([]);
+      }
+    } catch (err: unknown) {
+      console.error("Error fetching clients:", err);
+      setError(
+        err instanceof Error ? err.message : "Error al cargar los clientes"
+      );
+    } finally {
+      setLoading((prev) => ({ ...prev, clients: false }));
+    }
+  };
   const handleCreateClient = async () => {
     if (!newClient.name || !newClient.contact_info) {
       setError("Nombre e información de contacto son requeridos");
+      return;
+    }
+
+    // Validar dirección si existe
+    if (
+      newClient.direccion &&
+      (!newClient.direccion.calle ||
+        !newClient.direccion.numeroExterior ||
+        !newClient.direccion.colonia ||
+        !newClient.direccion.codigoPostal ||
+        !newClient.direccion.alcaldiaMunicipio ||
+        !newClient.direccion.estado)
+    ) {
+      setError(
+        "Todos los campos de dirección son requeridos excepto número interior y país"
+      );
       return;
     }
 
@@ -116,7 +162,21 @@ const ClientsPage: React.FC = () => {
     try {
       await clientApi.create(newClient);
       setOpenCreateDialog(false);
-      setNewClient({ name: "", contact_info: "", status: true });
+      setNewClient({
+        name: "",
+        contact_info: "",
+        status: true,
+        direccion: {
+          calle: "",
+          numeroExterior: "",
+          numeroInterior: "",
+          colonia: "",
+          codigoPostal: "",
+          alcaldiaMunicipio: "",
+          estado: "",
+          pais: "México",
+        },
+      });
       await fetchClients();
     } catch (err: unknown) {
       console.error("Error creating client:", err);
@@ -438,6 +498,7 @@ const ClientsPage: React.FC = () => {
         >
           <DialogTitle>Crear Nuevo Cliente</DialogTitle>
           <DialogContent>
+            {/* Campos existentes (nombre, contacto) */}
             <TextField
               autoFocus
               margin="dense"
@@ -468,6 +529,225 @@ const ClientsPage: React.FC = () => {
               size={isMobile ? "small" : "medium"}
               required
             />
+
+            {/* Nuevos campos fiscales */}
+            <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
+              Datos Fiscales
+            </Typography>
+
+            <TextField
+              margin="dense"
+              label="RFC"
+              fullWidth
+              variant="outlined"
+              value={newClient.rfc || ""}
+              onChange={(e) =>
+                setNewClient({ ...newClient, rfc: e.target.value })
+              }
+              disabled={loading.action}
+              sx={{ mb: 2 }}
+              size={isMobile ? "small" : "medium"}
+            />
+
+            <TextField
+              margin="dense"
+              label="Email Fiscal"
+              fullWidth
+              variant="outlined"
+              value={newClient.emailFiscal || ""}
+              onChange={(e) =>
+                setNewClient({ ...newClient, emailFiscal: e.target.value })
+              }
+              disabled={loading.action}
+              sx={{ mb: 2 }}
+              size={isMobile ? "small" : "medium"}
+            />
+
+            <TextField
+              margin="dense"
+              label="Régimen Fiscal"
+              fullWidth
+              variant="outlined"
+              value={newClient.regimenFiscal || ""}
+              onChange={(e) =>
+                setNewClient({ ...newClient, regimenFiscal: e.target.value })
+              }
+              disabled={loading.action}
+              sx={{ mb: 2 }}
+              size={isMobile ? "small" : "medium"}
+            />
+
+            <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
+              Dirección Fiscal
+            </Typography>
+
+            <Grid container spacing={2}>
+              <Grid item xs={8}>
+                <TextField
+                  margin="dense"
+                  label="Calle"
+                  fullWidth
+                  variant="outlined"
+                  value={newClient.direccion?.calle || ""}
+                  onChange={(e) =>
+                    setNewClient({
+                      ...newClient,
+                      direccion: {
+                        ...newClient.direccion,
+                        calle: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={loading.action}
+                  size={isMobile ? "small" : "medium"}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  margin="dense"
+                  label="N° Ext."
+                  fullWidth
+                  variant="outlined"
+                  value={newClient.direccion?.numeroExterior || ""}
+                  onChange={(e) =>
+                    setNewClient({
+                      ...newClient,
+                      direccion: {
+                        ...newClient.direccion,
+                        numeroExterior: e.target.value || "",
+                      },
+                    })
+                  }
+                  disabled={loading.action}
+                  size={isMobile ? "small" : "medium"}
+                  required
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  margin="dense"
+                  label="N° Int. (Opcional)"
+                  fullWidth
+                  variant="outlined"
+                  value={newClient.direccion?.numeroInterior || ""}
+                  onChange={(e) =>
+                    setNewClient({
+                      ...newClient,
+                      direccion: {
+                        ...newClient.direccion,
+                        numeroInterior: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={loading.action}
+                  size={isMobile ? "small" : "medium"}
+                />
+              </Grid>
+              <Grid item xs={8}>
+                <TextField
+                  margin="dense"
+                  label="Colonia"
+                  fullWidth
+                  variant="outlined"
+                  value={newClient.direccion?.colonia || ""}
+                  onChange={(e) =>
+                    setNewClient({
+                      ...newClient,
+                      direccion: {
+                        ...newClient.direccion,
+                        colonia: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={loading.action}
+                  size={isMobile ? "small" : "medium"}
+                  required
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  margin="dense"
+                  label="Código Postal"
+                  fullWidth
+                  variant="outlined"
+                  value={newClient.direccion?.codigoPostal || ""}
+                  onChange={(e) =>
+                    setNewClient({
+                      ...newClient,
+                      direccion: {
+                        ...newClient.direccion,
+                        codigoPostal: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={loading.action}
+                  size={isMobile ? "small" : "medium"}
+                  required
+                />
+              </Grid>
+              <Grid item xs={8}>
+                <TextField
+                  margin="dense"
+                  label="Alcaldía/Municipio"
+                  fullWidth
+                  variant="outlined"
+                  value={newClient.direccion?.alcaldiaMunicipio || ""}
+                  onChange={(e) =>
+                    setNewClient({
+                      ...newClient,
+                      direccion: {
+                        ...newClient.direccion,
+                        alcaldiaMunicipio: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={loading.action}
+                  size={isMobile ? "small" : "medium"}
+                  required
+                />
+              </Grid>
+              <Grid item xs={8}>
+                <TextField
+                  margin="dense"
+                  label="Estado"
+                  fullWidth
+                  variant="outlined"
+                  value={newClient.direccion?.estado || ""}
+                  onChange={(e) =>
+                    setNewClient({
+                      ...newClient,
+                      direccion: {
+                        ...newClient.direccion,
+                        estado: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={loading.action}
+                  size={isMobile ? "small" : "medium"}
+                  required
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  margin="dense"
+                  label="País"
+                  fullWidth
+                  variant="outlined"
+                  value={newClient.direccion?.pais || "México"}
+                  onChange={(e) =>
+                    setNewClient({
+                      ...newClient,
+                      direccion: {
+                        ...newClient.direccion,
+                        pais: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={loading.action}
+                  size={isMobile ? "small" : "medium"}
+                />
+              </Grid>
+            </Grid>
 
             <FormControlLabel
               control={

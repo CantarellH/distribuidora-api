@@ -4,7 +4,6 @@ import { EggType } from "../models/EggType";
 import { Supplier } from "../models/Supplier";
 import { EggTypeSupplier } from "../models/EggTypeSupplier";
 
-// Obtener todos los tipos de huevo
 export const getEggTypes = async (
   req: Request,
   res: Response
@@ -21,24 +20,23 @@ export const getEggTypes = async (
   }
 };
 
-
-// Crear un tipo de huevo con opción de vincularlo a un proveedor
 export const createEggType = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const { name, description, supplierId } = req.body;
+    const { name, description, supplierId, claveSat, unidadSat, claveUnidadSat } = req.body;
 
-    if (!name) {
-      res.status(400).json({ error: "El nombre es obligatorio" });
+    if (!name || !claveSat || !unidadSat || !claveUnidadSat) {
+      res.status(400).json({ 
+        error: "Nombre, Clave SAT y Unidad SAT son obligatorios" 
+      });
       return;
     }
 
     const eggTypeRepository = AppDataSource.getRepository(EggType);
     const supplierRepository = AppDataSource.getRepository(Supplier);
-    const eggTypeSupplierRepository =
-      AppDataSource.getRepository(EggTypeSupplier);
+    const eggTypeSupplierRepository = AppDataSource.getRepository(EggTypeSupplier);
 
     let supplier = null;
     if (supplierId) {
@@ -49,11 +47,15 @@ export const createEggType = async (
       }
     }
 
-    // Crear el tipo de huevo
-    const newEggType = eggTypeRepository.create({ name, description });
+    const newEggType = eggTypeRepository.create({ 
+      name, 
+      description, 
+      claveSat,
+      unidadSat,
+      claveUnidadSat
+    });
     await eggTypeRepository.save(newEggType);
 
-    // Si se proporcionó supplierId, crear la relación automáticamente
     if (supplier) {
       const newEggTypeSupplier = eggTypeSupplierRepository.create({
         eggType: newEggType,
@@ -62,17 +64,15 @@ export const createEggType = async (
       await eggTypeSupplierRepository.save(newEggTypeSupplier);
     }
 
-    // Obtener el tipo de huevo con sus proveedores asociados
     const eggTypeWithSuppliers = await eggTypeRepository.findOne({
       where: { id: newEggType.id },
-      relations: ["eggTypeSuppliers", "eggTypeSuppliers.supplier"], // Incluir las relaciones
+      relations: ["eggTypeSuppliers", "eggTypeSuppliers.supplier"],
     });
 
     if (!eggTypeWithSuppliers) {
       throw new Error("No se encontró el tipo de huevo con proveedores");
     }
 
-    // Formatear la respuesta para incluir los proveedores
     const response = {
       ...eggTypeWithSuppliers,
       suppliers: eggTypeWithSuppliers.eggTypeSuppliers.map((ets) => ets.supplier),
@@ -85,12 +85,10 @@ export const createEggType = async (
   }
 };
 
-// Obtener los proveedores de un tipo de huevo
 export const getSuppliersByEggType = async (req: Request, res: Response) => {
   try {
     const { eggTypeId } = req.params;
-    const eggTypeSupplierRepository =
-      AppDataSource.getRepository(EggTypeSupplier);
+    const eggTypeSupplierRepository = AppDataSource.getRepository(EggTypeSupplier);
 
     const suppliers = await eggTypeSupplierRepository.find({
       where: { eggType: { id: parseInt(eggTypeId, 10) } },
@@ -100,18 +98,14 @@ export const getSuppliersByEggType = async (req: Request, res: Response) => {
     res.status(200).json(suppliers.map((s) => s.supplier));
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ error: "Error al obtener proveedores por tipo de huevo" });
+    res.status(500).json({ error: "Error al obtener proveedores por tipo de huevo" });
   }
 };
 
-// Obtener los tipos de huevo de un proveedor
 export const getEggTypesBySupplier = async (req: Request, res: Response) => {
   try {
     const { supplierId } = req.params;
-    const eggTypeSupplierRepository =
-      AppDataSource.getRepository(EggTypeSupplier);
+    const eggTypeSupplierRepository = AppDataSource.getRepository(EggTypeSupplier);
 
     const eggTypes = await eggTypeSupplierRepository.find({
       where: { supplier: { id: parseInt(supplierId, 10) } },
@@ -121,29 +115,25 @@ export const getEggTypesBySupplier = async (req: Request, res: Response) => {
     res.status(200).json(eggTypes.map((et) => et.eggType));
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ error: "Error al obtener tipos de huevo por proveedor" });
+    res.status(500).json({ error: "Error al obtener tipos de huevo por proveedor" });
   }
 };
 
-// Actualizar un tipo de huevo
 export const updateEggType = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, description, supplierId } = req.body;
+    const { name, description, supplierId, claveSat, unidadSat, claveUnidadSat } = req.body;
 
     const eggTypeRepository = AppDataSource.getRepository(EggType);
     const supplierRepository = AppDataSource.getRepository(Supplier);
     const eggTypeSupplierRepository = AppDataSource.getRepository(EggTypeSupplier);
 
-    // Buscar el tipo de huevo
     const eggType = await eggTypeRepository.findOne({
       where: { id: parseInt(id, 10) },
-      relations: ["eggTypeSuppliers"], // Cargamos las relaciones para poder eliminarlas
+      relations: ["eggTypeSuppliers"],
     });
 
     if (!eggType) {
@@ -151,13 +141,13 @@ export const updateEggType = async (
       return;
     }
 
-    // Actualizar los datos del tipo de huevo
     eggType.name = name || eggType.name;
     eggType.description = description || eggType.description;
+    eggType.claveSat = claveSat || eggType.claveSat;
+    eggType.unidadSat = unidadSat || eggType.unidadSat;
 
     await eggTypeRepository.save(eggType);
 
-    // Si se proporciona un supplierId, actualizar la relación
     if (supplierId) {
       const supplier = await supplierRepository.findOneBy({ id: supplierId });
       if (!supplier) {
@@ -165,10 +155,8 @@ export const updateEggType = async (
         return;
       }
 
-      // Eliminar relaciones previas con otros proveedores
       await eggTypeSupplierRepository.delete({ eggType: { id: eggType.id } });
 
-      // Crear una nueva relación con el nuevo proveedor
       const newEggTypeSupplier = eggTypeSupplierRepository.create({
         eggType,
         supplier,
@@ -176,14 +164,16 @@ export const updateEggType = async (
       await eggTypeSupplierRepository.save(newEggTypeSupplier);
     }
 
-    res.status(200).json({ message: "Tipo de huevo actualizado correctamente", eggType });
+    res.status(200).json({ 
+      message: "Tipo de huevo actualizado correctamente", 
+      eggType 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al actualizar el tipo de huevo" });
   }
 };
 
-// Eliminar un tipo de huevo
 export const deleteEggType = async (
   req: Request,
   res: Response

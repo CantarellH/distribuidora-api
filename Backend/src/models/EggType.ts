@@ -22,20 +22,16 @@ export class EggType {
   @Column({ nullable: true })
     sku?: string;
 
-      // Nuevos campos para facturación
-    @Column({ type: "decimal", precision: 10, scale: 2 })
-    price!: number;
-
     @Column({ type: "varchar", length: 10 })
-    claveSat!: string; // Ej: "01010101"
+    claveSat!: string;
 
     @Column({ type: "varchar", length: 20 })
-    unidadSat!: string; // Ej: "PIEZA"
+    unidadSat!: string;
 
     @Column({ type: "varchar", length: 10 })
-    claveUnidadSat!: string; // Ej: "H87"
+    claveUnidadSat!: string;
 
-    @Column({ type: "int" })
+    @Column({ type: "int" , nullable: true})
     currentStock!: number;
 
   @Column({ type: "varchar", length: 255, nullable: true })

@@ -14,13 +14,13 @@ interface Product {
   createdAt: string;
   updatedAt: string;
 }
-interface ApiError {
+interface ApiError extends Error {
   response?: {
     data?: {
       error?: string;
     };
   };
-  message?: string;
+  message: string;
 }
 
 interface Supplier {
@@ -73,10 +73,17 @@ const SuppliersPage: React.FC = () => {
   setError(null);
   try {
     const response = await supplierApi.getAll();
-    setSuppliers(response.data); // Extrae .data de la respuesta
+    if (response && response.data) {
+      setSuppliers(response.data);
+    } else {
+      throw new Error("La respuesta del servidor no contiene datos");
+    }
   } catch (err) {
     console.error("Error obteniendo proveedores:", err);
-    setError("Error al cargar los proveedores. Por favor, inténtelo de nuevo.");
+    const errorMessage = (err as ApiError).response?.data?.error || 
+                        (err as Error).message || 
+                        "Error al cargar los proveedores. Por favor, inténtelo de nuevo.";
+    setError(errorMessage);
   } finally {
     setLoading(false);
   }
@@ -85,14 +92,21 @@ const SuppliersPage: React.FC = () => {
   const fetchProducts = async (supplierId: number) => {
   try {
     const response = await eggTypeApi.getBySupplier(supplierId);
-    setSuppliers((prev) =>
-      prev.map((supplier) =>
-        supplier.id === supplierId ? { ...supplier, products: response.data } : supplier
-      )
-    );
+    if (response && response.data) {
+      setSuppliers((prev) =>
+        prev.map((supplier) =>
+          supplier.id === supplierId ? { ...supplier, products: response.data } : supplier
+        )
+      );
+    } else {
+      throw new Error("La respuesta del servidor no contiene datos");
+    }
   } catch (err) {
     console.error("Error obteniendo productos:", err);
-    setError(`Error al cargar los productos del proveedor #${supplierId}`);
+    const errorMessage = (err as ApiError).response?.data?.error || 
+                        (err as Error).message || 
+                        `Error al cargar los productos del proveedor #${supplierId}`;
+    setError(errorMessage);
   }
 };
 

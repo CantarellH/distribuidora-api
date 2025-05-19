@@ -48,10 +48,10 @@ export const createClient = async (
     }
 
     // Validación de RFC si se proporciona
-    if (rfc && !/^[A-Z&Ñ]{3,4}\d{6}[A-V1-9][0-9A-Z]([0-9A])?$/.test(rfc)) {
-      res.status(400).json({ error: "El RFC proporcionado no es válido." });
-      return;
-    }
+    if (rfc && !/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{2}[0-9A]?$/i.test(rfc)) {
+  res.status(400).json({ error: "El RFC proporcionado no es válido." });
+  return;
+}
 
     const clientRepository = AppDataSource.getRepository(Client);
     
@@ -162,31 +162,39 @@ export const updateClient = async (req: Request, res: Response): Promise<void> =
   const { id } = req.params;
   
   try {
-    const camposActualizables: ClientUpdateFields = {
-      rfc: req.body.rfc,
-      emailFiscal: req.body.emailFiscal,
-      // ... otros campos
-    };
-
-    const client = await AppDataSource.getRepository(Client).findOneBy({ 
-      id: parseInt(id, 10) 
-    });
+    const clientRepository = AppDataSource.getRepository(Client);
+    const client = await clientRepository.findOneBy({ id: parseInt(id, 10) });
 
     if (!client) {
       res.status(404).json({ error: "El cliente no existe." });
       return;
     }
 
-    // Actualización segura con tipos
-    Object.entries(camposActualizables).forEach(([key, value]) => {
-      if (value !== undefined) 
-        client[key as keyof ClientUpdateFields] = value;
-    });
+    // Campos básicos
+    if (req.body.name) client.name = req.body.name;
+    if (req.body.contact_info) client.contact_info = req.body.contact_info;
+    if (req.body.status !== undefined) client.status = req.body.status;
 
-    await AppDataSource.getRepository(Client).save(client);
+    // Campos fiscales
+    if (req.body.rfc !== undefined) client.rfc = req.body.rfc;
+    if (req.body.emailFiscal !== undefined) client.emailFiscal = req.body.emailFiscal;
+    if (req.body.regimenFiscal !== undefined) client.regimenFiscal = req.body.regimenFiscal;
+
+    // Campos de dirección
+    if (req.body.calle !== undefined) client.calle = req.body.calle;
+    if (req.body.numeroExterior !== undefined) client.numeroExterior = req.body.numeroExterior;
+    if (req.body.numeroInterior !== undefined) client.numeroInterior = req.body.numeroInterior;
+    if (req.body.colonia !== undefined) client.colonia = req.body.colonia;
+    if (req.body.codigoPostal !== undefined) client.codigoPostal = req.body.codigoPostal;
+    if (req.body.alcaldiaMunicipio !== undefined) client.alcaldiaMunicipio = req.body.alcaldiaMunicipio;
+    if (req.body.estado !== undefined) client.estado = req.body.estado;
+    if (req.body.pais !== undefined) client.pais = req.body.pais;
+
+    await clientRepository.save(client);
     res.status(200).json(client);
   } catch (error) {
-    // Manejo de errores
+    console.error(error);
+    res.status(500).json({ error: "Error interno del servidor." });
   }
 };
 

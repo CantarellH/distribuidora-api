@@ -9,7 +9,7 @@ import suppliers from "./routes/supplierRoutes";
 import inventory from "./routes/inventoryRoutes";
 import clients from "./routes/clientRoutes";
 import remissions from "./routes/remissionsRoutes";
-import facturacion from "./routes/facturacionRoutes";
+import facturacion from "./routes/invoiceRoutes";
 import payments from "./routes/paymentRoutes";
 import { join } from "path";
 import moduleRoutes from "./routes/moduleRoutes";

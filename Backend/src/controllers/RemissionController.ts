@@ -7,7 +7,8 @@ import { EggType } from "../models/EggType";
 import { Client } from "../models/Client";
 import { PaymentDetail } from "../models/PaymentDetail";
 import { Supplier } from "../models/Supplier";
-import { FacturacionError } from "../errors/FacturacionError";
+import { PrinterService } from '../services/printer.service';
+
 
 export const createRemission = async (
   req: Request,
@@ -622,6 +623,34 @@ export const deleteRemission = async (
   }
 };
 
+export const printRemission = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const remission = await getRemissionById(id);
+    
+    // Verificar si la remisión es imprimible
+    if (!remission || !remission.details?.length) {
+      return res.status(400).json({ error: 'Remisión no válida para impresión' });
+    }
+
+    const result = await PrinterService.printRemission(remission);
+    
+    // Registrar en el sistema
+    await registerPrintLog(req.user.id, id);
+    
+    res.json({ 
+      success: true,
+      message: `Remisión #${id} enviada a ${process.env.PRINTER_NAME || 'impresora predeterminada'}`
+    });
+  } catch (error) {
+    console.error('Print error:', error);
+    res.status(500).json({ 
+      error: 'Error al imprimir',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 export const getPreciosActuales = async (req: Request, res: Response): Promise<void> => {
   try {
     const eggTypes = await AppDataSource.getRepository(EggType)
@@ -630,6 +659,7 @@ export const getPreciosActuales = async (req: Request, res: Response): Promise<v
         "eggType.id",
         "eggType.name",
         "eggType.sku",
+        "eggType.price",
         "eggType.claveSat",
         "eggType.unidadSat",
         "eggType.currentStock"

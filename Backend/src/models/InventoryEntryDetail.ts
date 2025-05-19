@@ -15,11 +15,30 @@ export class InventoryEntryDetail {
   @JoinColumn({ name: "egg_type_id" })
   eggType!: EggType;
 
-  @Column({ name: "box_count", type: "int" })
+  @Column({ 
+    name: "box_count", 
+    type: "int",
+    comment: "Número de cajas recibidas"
+  })
   boxCount!: number;
 
-  @Column({ name: "weight_total", type: "numeric", precision: 10, scale: 2 })
+  @Column({ 
+    name: "weight_total", 
+    type: "numeric", 
+    precision: 10, 
+    scale: 2,
+    comment: "Peso total en kilogramos (incluye peso de empaques)"
+  })
   weightTotal!: number;
+  
+  @Column({
+    name: "unit_price",
+    type: "decimal",
+    precision: 10,
+    scale: 2,
+    comment: "Precio por kilogramo al momento de la entrada"
+  })
+  unitPrice!: number;
 
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;

@@ -5,7 +5,7 @@ import {
   OneToMany,
   ManyToOne,
   CreateDateColumn,
-  UpdateDateColumn
+  UpdateDateColumn,
 } from "typeorm";
 import { RemissionDetail } from "./RemissionDetail";
 import { InventoryMovement } from "./InventoryMovement";
@@ -20,30 +20,55 @@ export class EggType {
   name!: string;
 
   @Column({ nullable: true })
-    sku?: string;
+  sku?: string;
 
-    @Column({ type: "varchar", length: 10 })
-    claveSat!: string;
+  @Column({
+    type: "varchar",
+    length: 10,
+    comment: "Clave del producto según catálogo del SAT",
+  })
+  claveSat!: string;
 
-    @Column({ type: "varchar", length: 20 })
-    unidadSat!: string;
+  @Column({
+    type: "varchar",
+    length: 20,
+    comment: "Unidad de medida según SAT (PIEZA, KILOGRAMO, etc)",
+  })
+  unidadSat!: string;
 
-    @Column({ type: "varchar", length: 10 })
-    claveUnidadSat!: string;
+  @Column({
+    type: "varchar",
+    length: 10,
+    comment: "Clave de unidad de medida según catálogo SAT",
+  })
+  claveUnidadSat!: string;
 
-    @Column({ type: "int" , nullable: true})
-    currentStock!: number;
+  @Column({
+    type: "int",
+    default: 0,
+    comment: "Inventario actual en número de cajas",
+  })
+  currentStock!: number;
 
   @Column({ type: "varchar", length: 255, nullable: true })
   description?: string;
 
-  @OneToMany(() => EggTypeSupplier, (eggTypeSupplier: EggTypeSupplier) => eggTypeSupplier.eggType)
+  @OneToMany(
+    () => EggTypeSupplier,
+    (eggTypeSupplier: EggTypeSupplier) => eggTypeSupplier.eggType
+  )
   eggTypeSuppliers!: EggTypeSupplier[];
 
-  @OneToMany(() => RemissionDetail, (remissionDetail: RemissionDetail) => remissionDetail.eggType)
+  @OneToMany(
+    () => RemissionDetail,
+    (remissionDetail: RemissionDetail) => remissionDetail.eggType
+  )
   remissionDetails!: RemissionDetail[];
 
-  @OneToMany(() => InventoryMovement, (movement: InventoryMovement) => movement.eggType)
+  @OneToMany(
+    () => InventoryMovement,
+    (movement: InventoryMovement) => movement.eggType
+  )
   movements!: InventoryMovement[];
 
   @CreateDateColumn()

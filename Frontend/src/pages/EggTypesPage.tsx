@@ -46,6 +46,7 @@ interface EggType {
   unidadSat: string;
   claveUnidadSat: string;
   description: string;
+  currentStock?: number;
   eggTypeSuppliers: EggTypeSupplier[];
 }
 

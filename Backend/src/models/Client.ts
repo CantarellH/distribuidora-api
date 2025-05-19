@@ -32,13 +32,28 @@ export class Client {
   @Column({ type: "boolean", default: true })
   status!: boolean;
 
-  @Column({ type: "varchar", length: 13, nullable: true })
+  @Column({ 
+    type: "varchar", 
+    length: 13, 
+    nullable: true,
+    comment: "RFC con homoclave para personas físicas o morales"
+  })
   rfc?: string;
 
-  @Column({ type: "varchar", length: 255, nullable: true })
+  @Column({ 
+    type: "varchar", 
+    length: 255, 
+    nullable: true,
+    comment: "Email para recibir comprobantes fiscales"
+  })
   emailFiscal?: string;
 
-  @Column({ type: "varchar", length: 10, nullable: true })
+  @Column({ 
+    type: "varchar", 
+    length: 10, 
+    nullable: true,
+    comment: "Clave del régimen fiscal según catálogo del SAT"
+  })
   regimenFiscal?: string;
 
   // Nueva estructura de dirección
@@ -85,4 +100,9 @@ export class Client {
     ].filter(Boolean).join(', ');
   }
 
+  validateForInvoice(): void {
+    if (!this.rfc || !this.regimenFiscal || !this.codigoPostal) {
+      throw new Error("Cliente no tiene los datos fiscales completos para facturación");
+    }
+  }
 }

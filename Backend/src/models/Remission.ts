@@ -30,21 +30,21 @@ export class Remission {
   @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
   weightTotal!: number;
 
-  @Column({ 
-        type: "decimal", 
-        precision: 10, 
-        scale: 2,
-        comment: "Precio por kilo al momento de la remisión" 
-    })
-    pricePerKilo!: number;
+  @Column({
+    type: "decimal",
+    precision: 10,
+    scale: 2,
+    comment: "Precio por kilo al momento de la remisión",
+  })
+  pricePerKilo!: number;
 
-    @Column({
-        type: "varchar",
-        length: 20,
-        nullable: true,
-        comment: "Clave SAT del producto al momento de la remisión"
-    })
-    claveSatSnapshot?: string;
+  @Column({
+    type: "varchar",
+    length: 20,
+    nullable: true,
+    comment: "Clave SAT del producto al momento de la remisión",
+  })
+  claveSatSnapshot?: string;
 
   @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
   totalCost!: number;
@@ -54,6 +54,16 @@ export class Remission {
 
   @Column({ nullable: true })
   cfdiFolio?: string; // Folio fiscal del CFDI
+
+
+  @Column({ type: "timestamp", nullable: true })
+  cfdiFecha?: Date; // Fecha de timbrado
+
+  @Column({ type: "text", nullable: true })
+  cfdiXml?: string; // XML completo del CFDI
+
+  @Column({ type: "text", nullable: true })
+  cfdiPdf?: string; // PDF en base64
 
   @Column({ type: "timestamp", nullable: true })
   fechaFacturacion?: Date;
@@ -72,6 +82,6 @@ export class Remission {
   shouldBeInvoiced!: boolean;
 
   getImporte(): number {
-        return this.weightTotal * this.pricePerKilo;
-    }
+    return this.weightTotal * this.pricePerKilo;
+  }
 }

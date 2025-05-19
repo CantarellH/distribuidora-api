@@ -14,6 +14,24 @@ interface ClientUpdateFields {
   estado?: string;
   pais?: string;
 }
+/*interface EggType {
+  id: number;
+  name: string;
+  description?: string;
+  claveSat: string;
+  unidadSat: string;
+  claveUnidadSat: string;
+  price?: number;
+  currentStock: number;
+}
+
+interface InvoiceResponse {
+  uuid: string;
+  fechaTimbrado: string;
+  cfdiXml: string;
+  pdfBase64?: string;
+  status: string;
+}*/
 
 interface RemissionDetail {
   eggTypeId: number;
@@ -26,6 +44,7 @@ interface RemissionDetail {
   unidadSat?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface InventoryMovement {
   eggTypeId: number;
   movementType: string;
@@ -43,6 +62,47 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// 2. NUEVO Interceptor para manejar respuestas y tokens expirados (AGREGAR ESTO)
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        const response = await authApi.refreshToken();
+        
+        // Validación segura añadida:
+        if (!response?.data?.token) {
+          throw new Error('Invalid token response');
+        }
+        
+        const newToken = response.data.token;
+        localStorage.setItem("token", newToken);
+        api.defaults.headers.Authorization = `Bearer ${newToken}`;
+        
+        return api(originalRequest);
+      } catch (refreshError) {
+        authApi.logout();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Interceptor para incluir el token en las peticiones
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
@@ -56,9 +116,10 @@ api.interceptors.request.use((config) => {
 const handleApiError = (error: unknown) => {
   if (axios.isAxiosError(error)) {
     if (error.response) {
-      const message = error.response.data?.message || 
-                     error.response.data?.error || 
-                     "Error en la solicitud";
+      const message =
+        error.response.data?.message ||
+        error.response.data?.error ||
+        "Error en la solicitud";
       throw new Error(message);
     } else if (error.request) {
       throw new Error("No se recibió respuesta del servidor");
@@ -71,7 +132,9 @@ const handleApiError = (error: unknown) => {
 export const authApi = {
   login: async (data: { username: string; password: string }) => {
     try {
-      return await api.post("/auth/login", data);
+      const response = await api.post("/auth/login", data);
+      localStorage.setItem("token", response.data.token); // Guardar token
+      return response;
     } catch (error) {
       handleApiError(error);
     }
@@ -85,10 +148,15 @@ export const authApi = {
   },
   refreshToken: async () => {
     try {
-      return await api.post("/auth/refresh-token");
+      const response = await api.post("/auth/refresh-token");
+      localStorage.setItem("token", response.data.token); // Actualizar token
+      return response;
     } catch (error) {
       handleApiError(error);
     }
+  },
+  logout: async () => {
+    localStorage.removeItem("token"); // Limpiar token
   },
 };
 
@@ -101,14 +169,22 @@ export const userApi = {
       handleApiError(error);
     }
   },
-  create: async (data: { username: string; password: string; role: number; status?: boolean }) => {
+  create: async (data: {
+    username: string;
+    password: string;
+    role: number;
+    status?: boolean;
+  }) => {
     try {
       return await api.post("/users", data);
     } catch (error) {
       handleApiError(error);
     }
   },
-  update: async (id: number, data: { username?: string; role?: number; status?: boolean }) => {
+  update: async (
+    id: number,
+    data: { username?: string; role?: number; status?: boolean }
+  ) => {
     try {
       return await api.put(`/users/${id}`, data);
     } catch (error) {
@@ -142,14 +218,20 @@ export const roleApi = {
   },
   assignPermissions: async (roleId: number, permissions: number[]) => {
     try {
-      return await api.post("/roles/assign-permissions", { roleId, permissions });
+      return await api.post("/roles/assign-permissions", {
+        roleId,
+        permissions,
+      });
     } catch (error) {
       handleApiError(error);
     }
   },
   removePermissions: async (roleId: number, permissions: number[]) => {
     try {
-      return await api.post("/roles/remove-permissions", { roleId, permissions });
+      return await api.post("/roles/remove-permissions", {
+        roleId,
+        permissions,
+      });
     } catch (error) {
       handleApiError(error);
     }
@@ -192,14 +274,20 @@ export const moduleApi = {
   },
   assignModules: async (roleId: number, modules: number[]) => {
     try {
-      return await api.post("/modules/assign", { roleId, modules });
+      return await api.post("/role-modules/assign", { 
+        roleId, 
+        modules 
+      });
     } catch (error) {
       handleApiError(error);
     }
   },
   removeModules: async (roleId: number, modules: number[]) => {
     try {
-      return await api.post("/modules/remove", { roleId, modules });
+      return await api.post("/role-modules/remove", { 
+        roleId, 
+        modules 
+      });
     } catch (error) {
       handleApiError(error);
     }
@@ -229,7 +317,16 @@ export const eggTypeApi = {
       handleApiError(error);
     }
   },
-  create: async (data: { name: string; description?: string; supplierId?: number }) => {
+  create: async (data: {
+    name: string;
+    description?: string;
+    supplierId?: number;
+    claveSat: string;
+    unidadSat: string;
+    claveUnidadSat: string;
+    price?: number;
+    currentStock?: number;
+  }) => {
     try {
       return await api.post("/types", data);
     } catch (error) {
@@ -323,7 +420,14 @@ export const supplierApi = {
 
 // Operaciones para Clientes (Clients)
 export const clientApi = {
-  getAll: async (params?: { name?: string; status?: boolean; startDate?: string; endDate?: string; rfc?: string; codigoPostal?: string }) => {
+  getAll: async (params?: {
+    name?: string;
+    status?: boolean;
+    startDate?: string;
+    endDate?: string;
+    rfc?: string;
+    codigoPostal?: string;
+  }) => {
     try {
       return await api.get("/clients", { params });
     } catch (error) {
@@ -337,23 +441,21 @@ export const clientApi = {
       handleApiError(error);
     }
   },
-  create: async (data: { 
-    name: string; 
-    contact_info: string; 
+  create: async (data: {
+    name: string;
+    contact_info: string;
     status?: boolean;
-    rfc?: string;
-    emailFiscal?: string;
-    regimenFiscal?: string;
-    direccion?: {
-      calle: string;
-      numeroExterior: string;
-      numeroInterior?: string;
-      colonia: string;
-      codigoPostal: string;
-      alcaldiaMunicipio: string;
-      estado: string;
-      pais?: string;
-    }
+    rfc: string;
+    emailFiscal: string;
+    regimenFiscal: string;
+    calle: string;
+    numeroExterior: string;
+    numeroInterior?: string;
+    colonia: string;
+    codigoPostal: string;
+    alcaldiaMunicipio: string;
+    estado: string;
+    pais?: string;
   }) => {
     try {
       return await api.post("/clients", data);
@@ -361,11 +463,30 @@ export const clientApi = {
       handleApiError(error);
     }
   },
+  updateFiscalData: async (id: number, data: ClientUpdateFields) => {
+    try {
+      return await api.put(`/clients/${id}/fiscal-data`, {
+        rfc: data.rfc,
+        emailFiscal: data.emailFiscal,
+        regimenFiscal: data.regimenFiscal,
+        calle: data.calle,
+        numeroExterior: data.numeroExterior,
+        numeroInterior: data.numeroInterior,
+        colonia: data.colonia,
+        codigoPostal: data.codigoPostal,
+        alcaldiaMunicipio: data.alcaldiaMunicipio,
+        estado: data.estado,
+        pais: data.pais || "México",
+      });
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
   update: async (
     id: number,
-    data: { 
-      name?: string; 
-      contact_info?: string; 
+    data: {
+      name?: string;
+      contact_info?: string;
       status?: boolean;
       fiscalData?: ClientUpdateFields;
     }
@@ -386,13 +507,6 @@ export const clientApi = {
   validateRfc: async (rfc: string) => {
     try {
       return await api.post("/clients/validate-rfc", { rfc });
-    } catch (error) {
-      handleApiError(error);
-    }
-  },
-  updateFiscalData: async (id: number, data: ClientUpdateFields) => {
-    try {
-      return await api.put(`/clients/${id}/fiscal-data`, data);
     } catch (error) {
       handleApiError(error);
     }
@@ -474,7 +588,11 @@ export const inventoryApi = {
       handleApiError(error);
     }
   },
-  adjustStock: async (data: { eggTypeId: number; quantity: number; reason: string }) => {
+  adjustStock: async (data: {
+    eggTypeId: number;
+    quantity: number;
+    reason: string;
+  }) => {
     try {
       return await api.post("/inventory/adjust-stock", data);
     } catch (error) {
@@ -506,7 +624,11 @@ export const inventoryApi = {
 
 // Operaciones para Remisiones (Remissions)
 export const remissionApi = {
-  getAll: async (params?: { clientId?: number; startDate?: string; endDate?: string }) => {
+  getAll: async (params?: {
+    clientId?: number;
+    startDate?: string;
+    endDate?: string;
+  }) => {
     try {
       return await api.get("/remissions", { params });
     } catch (error) {
@@ -520,10 +642,10 @@ export const remissionApi = {
       handleApiError(error);
     }
   },
-  create: async (data: { 
-    date: string; 
-    clientId: number; 
-    details: RemissionDetail[] 
+  create: async (data: {
+    date: string;
+    clientId: number;
+    details: RemissionDetail[];
   }) => {
     try {
       return await api.post("/remissions", data);
@@ -531,10 +653,7 @@ export const remissionApi = {
       handleApiError(error);
     }
   },
-  update: async (
-    id: number,
-    data: { date?: string; clientId?: number }
-  ) => {
+  update: async (id: number, data: { date?: string; clientId?: number }) => {
     try {
       return await api.put(`/remissions/${id}`, data);
     } catch (error) {
@@ -636,10 +755,7 @@ export const paymentApi = {
       handleApiError(error);
     }
   },
-  update: async (
-    id: number,
-    data: { amount?: number; method?: string }
-  ) => {
+  update: async (id: number, data: { amount?: number; method?: string }) => {
     try {
       return await api.put(`/payments/${id}`, data);
     } catch (error) {
@@ -659,11 +775,26 @@ export const paymentApi = {
 export const billingApi = {
   generateInvoice: async (remissionId: number) => {
     try {
-      return await api.post("/billing/generate", { remissionId });
+      return await api.post("/invoices/generate", { remissionId });
     } catch (error) {
       handleApiError(error);
     }
   },
+  getInvoice: async (remissionId: number) => {
+    try {
+      return await api.get(`/invoices/${remissionId}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+  downloadPdf: async (remissionId: number) => {
+    try {
+      return await api.get(`/invoices/${remissionId}/pdf`, {
+        responseType: 'blob' // Para manejar la descarga del PDF
+      });
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
 };
-
 export default api;
